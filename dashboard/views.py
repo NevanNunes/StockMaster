@@ -5,7 +5,7 @@ from django.db.models import Count, Sum, Q, F
 from inventory.models import Product, Operation, DocumentStatus, ProductStock
 
 class DashboardKPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get(self, request):
         # 1. Total Products

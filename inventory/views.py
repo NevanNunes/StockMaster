@@ -13,38 +13,41 @@ from services.operation_service import OperationService
 class WarehouseViewSet(viewsets.ModelViewSet):
     queryset = Warehouse.objects.all()
     serializer_class = WarehouseSerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     filterset_fields = ['warehouse']
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     filterset_fields = ['category']
 
 class OperationViewSet(viewsets.ModelViewSet):
     queryset = Operation.objects.all().order_by('-created_at')
     serializer_class = OperationSerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     filterset_fields = ['operation_type', 'status']
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        # For now, allow creation without user
+        serializer.save(created_by=None)
 
     @action(detail=True, methods=['post'])
     def validate(self, request, pk=None):
         try:
-            operation = OperationService.validate_operation(pk, user=request.user)
+            # Pass None for user if not authenticated
+            user = getattr(request, 'user', None) if hasattr(request, 'user') and request.user.is_authenticated else None
+            operation = OperationService.validate_operation(pk, user=user)
             serializer = self.get_serializer(operation)
             return Response(serializer.data)
         except ValueError as e:
@@ -55,7 +58,7 @@ class OperationViewSet(viewsets.ModelViewSet):
 class StockMovementViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = StockMovement.objects.all().order_by('-timestamp')
     serializer_class = StockMovementSerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     filterset_fields = ['product', 'transaction_type']
 
 from django.shortcuts import render
