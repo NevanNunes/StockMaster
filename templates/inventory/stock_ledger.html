@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Stock Ledger</h3>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Product</th>
+                        <th>Type</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Quantity</th>
+                        <th>User</th>
+                    </tr>
+                </thead>
+                <tbody id="ledger-table-body">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        fetchMovements();
+    });
+
+    function fetchMovements() {
+        fetch('/api/inventory/movements/')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('ledger-table-body');
+                tbody.innerHTML = '';
+                const results = data.results || data;
+
+                results.forEach(move => {
+                    const row = `
+                        <tr>
+                            <td>${new Date(move.timestamp).toLocaleString()}</td>
+                            <td>${move.product_sku}</td>
+                            <td>${move.transaction_type}</td>
+                            <td>${move.from_loc_name || '-'}</td>
+                            <td>${move.to_loc_name || '-'}</td>
+                            <td class="${move.quantity > 0 ? 'text-success' : 'text-danger'}">${move.quantity}</td>
+                            <td>${move.user_username || '-'}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            });
+    }
+</script>
+{% endblock %}

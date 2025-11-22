@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Operation: <span id="op-ref"></span></h3>
+    <div>
+        <button id="validate-btn" class="btn btn-success me-2" style="display: none;">Validate</button>
+        <a href="/operations/receipts/" class="btn btn-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <strong>Type:</strong> <span id="op-type"></span>
+            </div>
+            <div class="col-md-3">
+                <strong>Status:</strong> <span id="op-status" class="badge"></span>
+            </div>
+            <div class="col-md-3">
+                <strong>Source:</strong> <span id="op-source"></span>
+            </div>
+            <div class="col-md-3">
+                <strong>Destination:</strong> <span id="op-dest"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Lines</h5>
+    </div>
+    <div class="card-body">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Demand</th>
+                    <th>Done</th>
+                </tr>
+            </thead>
+            <tbody id="lines-body">
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const opId = "{{ op_id }}";
+
+    document.addEventListener('DOMContentLoaded', function () {
+        fetchOperationDetails();
+
+        document.getElementById('validate-btn').addEventListener('click', validateOperation);
+    });
+
+    function fetchOperationDetails() {
+        fetch(`/api/inventory/operations/${opId}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('op-ref').innerText = data.reference_number;
+                document.getElementById('op-type').innerText = data.operation_type;
+                document.getElementById('op-status').innerText = data.status;
+                document.getElementById('op-status').classList.add('bg-' + getStatusColor(data.status));
+                document.getElementById('op-source').innerText = data.source_location_name || '-';
+                document.getElementById('op-dest').innerText = data.destination_location_name || '-';
+
+                const tbody = document.getElementById('lines-body');
+                tbody.innerHTML = '';
+                data.lines.forEach(line => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${line.product_sku} - ${line.product_name}</td>
+                            <td>${line.quantity_demanded}</td>
+                            <td>${line.quantity_done}</td>
+                        </tr>
+                    `;
+                });
+
+                if (data.status === 'DRAFT' || data.status === 'WAITING') {
+                    document.getElementById('validate-btn').style.display = 'inline-block';
+                }
+            });
+    }
+
+    function validateOperation() {
+        if (!confirm('Are you sure you want to validate this operation? This will update stock levels.')) return;
+
+        fetch(`/api/inventory/operations/${opId}/validate/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    response.json().then(data => alert('Error: ' + data.error));
+                }
+            });
+    }
+
+    function getStatusColor(status) {
+        switch (status) {
+            case 'DRAFT': return 'secondary';
+            case 'WAITING': return 'warning';
+            case 'READY': return 'info';
+            case 'DONE': return 'success';
+            case 'CANCELED': return 'danger';
+            default: return 'primary';
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

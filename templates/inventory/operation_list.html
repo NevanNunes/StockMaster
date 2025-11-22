@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 id="page-title">Operations</h3>
+    <a href="add/" class="btn btn-primary"><i class="fas fa-plus me-2"></i>Create New</a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Reference</th>
+                        <th>Type</th>
+                        <th>Source</th>
+                        <th>Destination</th>
+                        <th>Status</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="ops-table-body">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const opType = "{{ op_type }}"; // Passed from view
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('page-title').innerText = getTitle(opType);
+        fetchOperations();
+    });
+
+    function getTitle(type) {
+        switch (type) {
+            case 'RECEIPT': return 'Receipts';
+            case 'DELIVERY': return 'Delivery Orders';
+            case 'TRANSFER': return 'Internal Transfers';
+            case 'ADJUSTMENT': return 'Stock Adjustments';
+            default: return 'Operations';
+        }
+    }
+
+    function fetchOperations() {
+        let url = '/api/inventory/operations/';
+        if (opType) {
+            url += `?operation_type=${opType}`;
+        }
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('ops-table-body');
+                tbody.innerHTML = '';
+                const results = data.results || data;
+
+                results.forEach(op => {
+                    const row = `
+                        <tr>
+                            <td><a href="/operations/${op.id}/">${op.reference_number}</a></td>
+                            <td>${op.operation_type}</td>
+                            <td>${op.source_location_name || '-'}</td>
+                            <td>${op.destination_location_name || '-'}</td>
+                            <td><span class="badge bg-${getStatusColor(op.status)}">${op.status}</span></td>
+                            <td>${new Date(op.created_at).toLocaleDateString()}</td>
+                            <td>
+                                <a href="/operations/${op.id}/" class="btn btn-sm btn-outline-primary">View</a>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            });
+    }
+
+    function getStatusColor(status) {
+        switch (status) {
+            case 'DRAFT': return 'secondary';
+            case 'WAITING': return 'warning';
+            case 'READY': return 'info';
+            case 'DONE': return 'success';
+            case 'CANCELED': return 'danger';
+            default: return 'primary';
+        }
+    }
+</script>
+{% endblock %}

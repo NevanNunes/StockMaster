@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Create Operation</h3>
+    <button onclick="history.back()" class="btn btn-secondary">Back</button>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <form id="op-form">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Operation Type</label>
+                    <select class="form-select" id="operation_type" required>
+                        <option value="RECEIPT">Receipt</option>
+                        <option value="DELIVERY">Delivery</option>
+                        <option value="TRANSFER">Internal Transfer</option>
+                        <option value="ADJUSTMENT">Adjustment</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Source Location</label>
+                    <select class="form-select" id="source_location">
+                        <option value="">Select Source</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Destination Location</label>
+                    <select class="form-select" id="destination_location">
+                        <option value="">Select Destination</option>
+                    </select>
+                </div>
+            </div>
+
+            <h5 class="mt-4">Lines</h5>
+            <table class="table table-bordered" id="lines-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <select class="form-select product-select" required>
+                                <option value="">Select Product</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="number" class="form-control quantity-input" required min="0.01" step="0.01">
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <button type="button" class="btn btn-secondary btn-sm mb-3" id="add-row">Add Line</button>
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">Create Draft</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let products = [];
+    let locations = [];
+
+    document.addEventListener('DOMContentLoaded', function () {
+        Promise.all([
+            fetch('/api/inventory/products/').then(r => r.json()),
+            fetch('/api/inventory/locations/').then(r => r.json())
+        ]).then(([prodData, locData]) => {
+            products = prodData.results || prodData;
+            locations = locData.results || locData;
+
+            populateLocations();
+            populateProductSelects();
+        });
+
+        document.getElementById('add-row').addEventListener('click', addRow);
+
+        document.getElementById('lines-table').addEventListener('click', function (e) {
+            if (e.target.classList.contains('remove-row')) {
+                e.target.closest('tr').remove();
+            }
+        });
+
+        document.getElementById('op-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            createOperation();
+        });
+    });
+
+    function populateLocations() {
+        const srcSelect = document.getElementById('source_location');
+        const dstSelect = document.getElementById('destination_location');
+
+        locations.forEach(loc => {
+            const opt1 = new Option(`${loc.warehouse_name} - ${loc.name}`, loc.id);
+            const opt2 = new Option(`${loc.warehouse_name} - ${loc.name}`, loc.id);
+            srcSelect.add(opt1);
+            dstSelect.add(opt2);
+        });
+    }
+
+    function populateProductSelects() {
+        document.querySelectorAll('.product-select').forEach(select => {
+            if (select.options.length <= 1) {
+                products.forEach(p => {
+                    select.add(new Option(`${p.sku} - ${p.name}`, p.id));
+                });
+            }
+        });
+    }
+
+    function addRow() {
+        const tbody = document.querySelector('#lines-table tbody');
+        const row = tbody.rows[0].cloneNode(true);
+        row.querySelector('input').value = '';
+        tbody.appendChild(row);
+    }
+
+    function createOperation() {
+        const lines = [];
+        document.querySelectorAll('#lines-table tbody tr').forEach(row => {
+            const prodId = row.querySelector('.product-select').value;
+            const qty = row.querySelector('.quantity-input').value;
+            if (prodId && qty) {
+                lines.push({
+                    product: prodId,
+                    quantity_demanded: parseFloat(qty)
+                });
+            }
+        });
+
+        const data = {
+            operation_type: document.getElementById('operation_type').value,
+            source_location: document.getElementById('source_location').value || null,
+            destination_location: document.getElementById('destination_location').value || null,
+            lines: lines
+        };
+
+        fetch('/api/inventory/operations/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = '/operations/receipts/'; // Redirect to list (simplification)
+                } else {
+                    alert('Error creating operation');
+                }
+            });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}
