@@ -1,0 +1,643 @@
+# StockMaster - Complete Understanding Guide
+
+## What is StockMaster?
+
+StockMaster is an **Inventory Management System** that helps businesses track their stock across multiple warehouses. Think of it as a digital replacement for manual stock registers and Excel sheets.
+
+**Core Features:**
+- Track products and their quantities in different locations
+- Record incoming stock (Receipts)
+- Record outgoing stock (Deliveries)
+- Move stock between locations (Transfers)
+- Fix stock discrepancies (Adjustments)
+- View complete history of all stock movements
+
+---
+
+## Technology Stack
+
+### Backend: Django + Django REST Framework (DRF)
+- **Django**: A Python web framework that handles the database, business logic, and serves web pages
+- **DRF**: An addon that makes it easy to create APIs (Application Programming Interfaces) - basically endpoints that send/receive data in JSON format
+
+### Frontend: HTML + CSS + JavaScript
+- **HTML**: Structure of web pages
+- **CSS**: Styling and layout
+- **JavaScript**: Makes pages interactive, fetches data from backend
+
+### Database: SQLite
+- A simple file-based database that stores all your data
+
+---
+
+## Project Structure
+
+```
+StockMaster/
+├── manage.py                    # Django's command-line tool
+├── db.sqlite3                   # Database file (created after migrations)
+│
+├── StockMaster/                 # Main project configuration
+│   ├── settings.py              # Project settings (database, apps, etc.)
+│   ├── urls.py                  # Main URL routing (directs requests to apps)
+│   └── wsgi.py                  # Web server configuration
+│
+├── users/                       # User management app
+│   └── models.py                # User model with roles (Manager/Staff)
+│
+├── inventory/                   # Core inventory app
+│   ├── models.py                # Database tables (Product, Stock, Operations)
+│   ├── serializers.py           # Converts data between Python and JSON
+│   ├── views.py                 # Handles requests and returns responses
+│   └── urls.py                  # URL routing for inventory features
+│
+├── dashboard/                   # Dashboard app
+│   ├── views.py                 # Dashboard logic and KPI calculations
+│   └── urls.py                  # Dashboard URL routing
+│
+├── services/                    # Business logic layer
+│   ├── stock_service.py         # Stock manipulation logic
+│   └── operation_service.py     # Operation validation logic
+│
+├── templates/                   # HTML templates
+│   ├── base.html                # Base template with sidebar/navbar
+│   ├── dashboard/
+│   │   └── index.html           # Dashboard page
+│   └── inventory/
+│       ├── product_list.html    # Product list page
+│       ├── operation_list.html  # Operations list page
+│       └── ...
+│
+├── static/                      # Static files (CSS, JS, images)
+│   ├── css/
+│   │   └── style.css            # Custom styles
+│   └── js/
+│       └── app.js               # JavaScript for sidebar toggle
+│
+└── tests/                       # Automated tests
+    └── test_stock_flow.py       # Tests for stock operations
+```
+
+---
+
+## How Data Flows: Backend → Database → Frontend
+
+### 1. **User Opens a Page** (e.g., `/products/`)
+
+```
+Browser → Django URLs → View Function → HTML Template → Browser
+```
+
+**Step by step:**
+1. User types `http://127.0.0.1:8000/products/` in browser
+2. Django checks [urls.py](file:///d:/StockMaster/inventory/urls.py) files to find which view handles `/products/`
+3. Found: [inventory/urls.py](file:///d:/StockMaster/inventory/urls.py) → [product_list_view](file:///d:/StockMaster/inventory/views.py#66-68) function
+4. View function renders [templates/inventory/product_list.html](file:///d:/StockMaster/templates/inventory/product_list.html)
+5. HTML is sent back to browser
+
+### 2. **Page Loads and Fetches Data via API**
+
+```
+JavaScript → API Endpoint → ViewSet → Serializer → Database → JSON Response
+```
+
+**Step by step:**
+1. HTML page loads in browser
+2. JavaScript code runs: [fetch('/api/inventory/products/')](file:///d:/StockMaster/templates/inventory/product_list.html#40-71)
+3. Django routes `/api/inventory/products/` to [ProductViewSet](file:///d:/StockMaster/inventory/views.py#29-34)
+4. ViewSet queries database: `Product.objects.all()`
+5. Serializer converts Python objects to JSON format
+6. JSON sent back to browser
+7. JavaScript displays data in HTML table
+
+### 3. **User Creates a Product**
+
+```
+Form Submit → JavaScript → API POST → ViewSet → Database → Response
+```
+
+**Step by step:**
+1. User fills form and clicks "Save"
+2. JavaScript collects form data
+3. JavaScript sends POST request: [fetch('/api/inventory/products/', {method: 'POST', body: data})](file:///d:/StockMaster/templates/inventory/product_list.html#40-71)
+4. `ProductViewSet.create()` receives data
+5. Serializer validates data
+6. New Product saved to database
+7. Success response sent back
+8. JavaScript redirects to product list
+
+---
+
+## Key Files Explained
+
+### Backend Files
+
+#### [inventory/models.py](file:///d:/StockMaster/inventory/models.py) - Database Tables
+Defines what data we store and how it's structured.
+
+**Key Models:**
+- [Product](file:///d:/StockMaster/inventory/models.py#31-40): name, SKU, category, unit of measure, minimum stock level
+- [Warehouse](file:///d:/StockMaster/inventory/models.py#5-12): name, code, address
+- [Location](file:///d:/StockMaster/inventory/models.py#13-23): specific place in warehouse (e.g., "Rack A")
+- [ProductStock](file:///d:/StockMaster/inventory/models.py#41-54): how much of each product is at each location
+- [Operation](file:///d:/StockMaster/inventory/models.py#62-100): receipts, deliveries, transfers, adjustments
+- [StockMovement](file:///d:/StockMaster/inventory/models.py#110-125): immutable ledger of all stock changes
+
+**Example:**
+```python
+class Product(models.Model):
+    name = models.CharField(max_length=200)
+    sku = models.CharField(max_length=50, unique=True)
+    # ... more fields
+```
+
+#### [inventory/serializers.py](file:///d:/StockMaster/inventory/serializers.py) - Data Conversion
+Converts between Python objects and JSON (for APIs).
+
+**Example:**
+```python
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = '__all__'  # Include all fields
+```
+
+This automatically creates JSON like:
+```json
+{
+  "id": 1,
+  "name": "Steel Sheet",
+  "sku": "RM-STEEL-001",
+  "category": 1
+}
+```
+
+#### [inventory/views.py](file:///d:/StockMaster/inventory/views.py) - Request Handlers
+
+**Two types of views:**
+
+1. **ViewSets (for APIs)**: Handle CRUD operations automatically
+```python
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+```
+This creates 5 endpoints automatically:
+- GET `/api/inventory/products/` - List all
+- POST `/api/inventory/products/` - Create new
+- GET `/api/inventory/products/1/` - Get one
+- PUT `/api/inventory/products/1/` - Update
+- DELETE `/api/inventory/products/1/` - Delete
+
+2. **Function Views (for HTML pages)**: Render templates
+```python
+def product_list_view(request):
+    return render(request, 'inventory/product_list.html')
+```
+
+#### [inventory/urls.py](file:///d:/StockMaster/inventory/urls.py) - URL Routing
+Maps URLs to views.
+
+```python
+urlpatterns = [
+    path('products/', product_list_view, name='product-list'),
+    path('api/inventory/products/', ProductViewSet),
+]
+```
+
+#### [services/stock_service.py](file:///d:/StockMaster/services/stock_service.py) - Business Logic
+Contains the core logic for stock operations.
+
+**Key Functions:**
+- [increase_stock()](file:///d:/StockMaster/services/stock_service.py#15-42): Adds stock to a location
+- [decrease_stock()](file:///d:/StockMaster/services/stock_service.py#43-71): Removes stock from a location
+- [move_stock()](file:///d:/StockMaster/services/stock_service.py#72-80): Transfers stock between locations
+- [adjust_stock()](file:///d:/StockMaster/services/stock_service.py#81-122): Corrects stock to match physical count
+
+**Why separate from views?**
+- Keeps code organized
+- Can be reused in multiple places
+- Easier to test
+- Uses database locking (`select_for_update()`) to prevent race conditions
+
+#### [services/operation_service.py](file:///d:/StockMaster/services/operation_service.py) - Operation Validation
+Handles the validation of operations (receipts, deliveries, etc.).
+
+**Main Function:**
+```python
+def validate_operation(operation_id, user=None):
+    # 1. Lock the operation
+    # 2. Check if it can be validated
+    # 3. Call appropriate stock service function
+    # 4. Update operation status to DONE
+```
+
+### Frontend Files
+
+#### [templates/base.html](file:///d:/StockMaster/templates/base.html) - Base Layout
+Contains the sidebar, navbar, and overall page structure. All other pages extend this.
+
+**Key sections:**
+- Sidebar with navigation links
+- Top navbar with user menu
+- Content area where child pages render
+- JavaScript and CSS includes
+
+#### [templates/dashboard/index.html](file:///d:/StockMaster/templates/dashboard/index.html) - Dashboard Page
+Shows KPI cards and recent operations.
+
+**How it works:**
+1. Extends [base.html](file:///d:/StockMaster/templates/base.html)
+2. Defines HTML structure for KPI cards
+3. JavaScript fetches data from `/api/dashboard/kpi/`
+4. Updates card values dynamically
+
+#### [templates/inventory/product_list.html](file:///d:/StockMaster/templates/inventory/product_list.html) - Product List
+Shows all products in a table.
+
+**Flow:**
+1. Page loads with empty table
+2. JavaScript: [fetch('/api/inventory/products/')](file:///d:/StockMaster/templates/inventory/product_list.html#40-71)
+3. Receives JSON array of products
+4. Loops through products and creates table rows
+5. Displays in browser
+
+#### [static/css/style.css](file:///d:/StockMaster/static/css/style.css) - Styling
+Custom CSS for sidebar colors, layout, and branding.
+
+#### [static/js/app.js](file:///d:/StockMaster/static/js/app.js) - Sidebar Toggle
+Simple JavaScript to show/hide sidebar on mobile.
+
+---
+
+## Complete Request Flow Examples
+
+### Example 1: Viewing Products
+
+```
+1. User clicks "Products" in sidebar
+   ↓
+2. Browser requests: GET /products/
+   ↓
+3. Django urls.py routes to: product_list_view()
+   ↓
+4. View renders: templates/inventory/product_list.html
+   ↓
+5. HTML sent to browser, page displays
+   ↓
+6. JavaScript runs: fetch('/api/inventory/products/')
+   ↓
+7. Django routes to: ProductViewSet
+   ↓
+8. ViewSet queries: Product.objects.all()
+   ↓
+9. Database returns: [Product1, Product2, ...]
+   ↓
+10. Serializer converts to: [{id:1, name:"Steel"}, ...]
+    ↓
+11. JSON sent to browser
+    ↓
+12. JavaScript creates table rows and displays data
+```
+
+### Example 2: Creating a Receipt
+
+```
+1. User fills receipt form and clicks "Create Draft"
+   ↓
+2. JavaScript collects form data:
+   {
+     operation_type: "RECEIPT",
+     destination_location: 1,
+     lines: [{product: 1, quantity_demanded: 100}]
+   }
+   ↓
+3. JavaScript: POST /api/inventory/operations/
+   ↓
+4. Django routes to: OperationViewSet.create()
+   ↓
+5. Serializer validates data
+   ↓
+6. New Operation saved to database (status: DRAFT)
+   ↓
+7. Auto-generates reference number (e.g., "REC-000001")
+   ↓
+8. Response sent back with new operation data
+   ↓
+9. JavaScript redirects to operations list
+```
+
+### Example 3: Validating a Receipt (Stock Increases)
+
+```
+1. User clicks "Validate" button on receipt detail page
+   ↓
+2. JavaScript: POST /api/inventory/operations/1/validate/
+   ↓
+3. Django routes to: OperationViewSet.validate()
+   ↓
+4. Calls: OperationService.validate_operation(1)
+   ↓
+5. Service locks operation in database (prevent concurrent edits)
+   ↓
+6. For each line in receipt:
+   - Calls: StockService.increase_stock()
+   - Updates ProductStock table (adds quantity)
+   - Creates StockMovement ledger entry
+   ↓
+7. Updates operation status to DONE
+   ↓
+8. Commits database transaction
+   ↓
+9. Response sent back
+   ↓
+10. JavaScript reloads page showing updated status
+```
+
+---
+
+## Database Tables and Relationships
+
+### Core Tables
+
+**users_user**
+- id, username, password, role (MANAGER/STAFF)
+
+**inventory_warehouse**
+- id, name, code, address
+
+**inventory_location**
+- id, warehouse_id (FK), name, code
+
+**inventory_category**
+- id, name, description
+
+**inventory_product**
+- id, name, sku, category_id (FK), uom, min_stock_level
+
+**inventory_productstock**
+- id, product_id (FK), location_id (FK), quantity
+- **Unique constraint**: (product_id, location_id)
+
+**inventory_operation**
+- id, operation_type, reference_number, status
+- source_location_id (FK), destination_location_id (FK)
+- created_by_id (FK), created_at, validated_at
+
+**inventory_operationline**
+- id, operation_id (FK), product_id (FK)
+- quantity_demanded, quantity_done
+
+**inventory_stockmovement** (Ledger)
+- id, product_id (FK), from_location_id (FK), to_location_id (FK)
+- quantity, transaction_type, reference_doc_id (FK)
+- timestamp, user_id (FK)
+
+### Relationships
+
+```
+Warehouse (1) ──── (Many) Location
+Category (1) ──── (Many) Product
+Product (1) ──── (Many) ProductStock
+Location (1) ──── (Many) ProductStock
+Operation (1) ──── (Many) OperationLine
+Product (1) ──── (Many) OperationLine
+```
+
+---
+
+## Common Workflows
+
+### Workflow 1: Receiving Stock from Supplier
+
+1. **Create Receipt**
+   - Go to Receipts → Create New
+   - Select destination location (e.g., "Receiving Area")
+   - Add products and quantities
+   - Click "Create Draft"
+
+2. **Validate Receipt**
+   - Open the receipt
+   - Click "Validate"
+   - System automatically:
+     - Increases stock at destination location
+     - Creates ledger entry
+     - Marks receipt as DONE
+
+### Workflow 2: Moving Stock Between Locations
+
+1. **Create Transfer**
+   - Go to Transfers → Create New
+   - Select source location (e.g., "Receiving Area")
+   - Select destination location (e.g., "Rack A")
+   - Add products and quantities
+   - Click "Create Draft"
+
+2. **Validate Transfer**
+   - Open the transfer
+   - Click "Validate"
+   - System automatically:
+     - Decreases stock at source
+     - Increases stock at destination
+     - Creates ledger entries
+     - Marks transfer as DONE
+
+### Workflow 3: Shipping to Customer
+
+1. **Create Delivery**
+   - Go to Deliveries → Create New
+   - Select source location
+   - Add products and quantities
+   - Click "Create Draft"
+
+2. **Validate Delivery**
+   - Open the delivery
+   - Click "Validate"
+   - System automatically:
+     - Decreases stock at source location
+     - Creates ledger entry
+     - Marks delivery as DONE
+
+---
+
+## Key Concepts
+
+### 1. ViewSets (DRF Concept)
+A ViewSet is a class that automatically provides CRUD operations for a model.
+
+**Instead of writing:**
+```python
+def list_products(request):
+    products = Product.objects.all()
+    # ... convert to JSON
+    
+def create_product(request):
+    # ... validate data
+    # ... save to database
+```
+
+**You write:**
+```python
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+```
+
+DRF automatically creates all the endpoints!
+
+### 2. Serializers (DRF Concept)
+Converts between Python objects and JSON.
+
+**Python Object:**
+```python
+product = Product(name="Steel", sku="RM-001")
+```
+
+**Serializer converts to JSON:**
+```json
+{"name": "Steel", "sku": "RM-001"}
+```
+
+**And vice versa!**
+
+### 3. Routers (DRF Concept)
+Automatically creates URL patterns for ViewSets.
+
+```python
+router = DefaultRouter()
+router.register(r'products', ProductViewSet)
+```
+
+This creates:
+- `/products/` - List/Create
+- `/products/1/` - Retrieve/Update/Delete
+
+### 4. Service Layer Pattern
+Separates business logic from views.
+
+**Bad (logic in view):**
+```python
+def validate_receipt(request, pk):
+    receipt = Receipt.objects.get(pk=pk)
+    for line in receipt.lines.all():
+        stock = ProductStock.objects.get(...)
+        stock.quantity += line.quantity
+        stock.save()
+```
+
+**Good (logic in service):**
+```python
+def validate_receipt(request, pk):
+    OperationService.validate_operation(pk)
+```
+
+Benefits:
+- Reusable
+- Testable
+- Cleaner code
+- Easier to maintain
+
+### 5. Database Locking
+Prevents two users from modifying the same stock simultaneously.
+
+```python
+ProductStock.objects.select_for_update().filter(pk=stock.pk)
+```
+
+This locks the row until the transaction completes.
+
+---
+
+## How to Extend StockMaster
+
+### Adding a New Field to Product
+
+1. **Update Model** ([inventory/models.py](file:///d:/StockMaster/inventory/models.py)):
+```python
+class Product(models.Model):
+    # ... existing fields
+    barcode = models.CharField(max_length=50, blank=True)
+```
+
+2. **Create Migration**:
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+3. **Update Serializer** ([inventory/serializers.py](file:///d:/StockMaster/inventory/serializers.py)):
+```python
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = '__all__'  # Automatically includes new field
+```
+
+4. **Update Frontend** ([templates/inventory/product_list.html](file:///d:/StockMaster/templates/inventory/product_list.html)):
+```html
+<th>Barcode</th>
+<!-- ... -->
+<td>${product.barcode}</td>
+```
+
+### Adding a New API Endpoint
+
+1. **Add Method to ViewSet** ([inventory/views.py](file:///d:/StockMaster/inventory/views.py)):
+```python
+class ProductViewSet(viewsets.ModelViewSet):
+    # ... existing code
+    
+    @action(detail=False, methods=['get'])
+    def low_stock(self, request):
+        products = Product.objects.filter(...)
+        serializer = self.get_serializer(products, many=True)
+        return Response(serializer.data)
+```
+
+2. **Access at**: `/api/inventory/products/low_stock/`
+
+---
+
+## Troubleshooting
+
+### "No such table" Error
+Run migrations:
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### "Module not found" Error
+Install dependencies:
+```bash
+pip install django djangorestframework
+```
+
+### Changes Not Showing
+Django dev server auto-reloads, but sometimes you need to:
+1. Stop server (Ctrl+C)
+2. Restart: `python manage.py runserver`
+
+### API Returns Empty Data
+Check if seed data exists:
+```bash
+python manage.py seed_data
+```
+
+---
+
+## Summary
+
+**StockMaster** is a full-stack inventory management system that:
+
+1. **Stores data** in SQLite database (models.py)
+2. **Provides APIs** using Django REST Framework (views.py, serializers.py)
+3. **Serves web pages** using Django templates (HTML files)
+4. **Fetches data dynamically** using JavaScript (fetch API)
+5. **Implements business logic** in service layer (services/)
+6. **Maintains audit trail** with immutable ledger (StockMovement)
+
+The flow is always:
+**User → Frontend → API → Service → Database → Response → Display**
+
+Each layer has a specific responsibility, making the code organized, maintainable, and scalable.
