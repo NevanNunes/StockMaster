@@ -53,3 +53,45 @@ StockMaster Inventory Management System
         except Exception as e:
             # Log the error but don't crash the transaction
             print(f"Failed to send low stock email: {e}")
+
+    @staticmethod
+    def notify_transfer_validated(operation) -> None:
+        """
+        Sends an email notification when a transfer is validated.
+        """
+        subject = f"🚚 Transfer Validated: {operation.reference_number}"
+        
+        lines_str = "\n".join([f"- {line.product.sku}: {line.quantity_done} {line.product.uom}" for line in operation.lines.all()])
+        
+        source = operation.source_location.name if operation.source_location else "Unknown"
+        dest = operation.destination_location.name if operation.destination_location else "Unknown"
+        user = operation.created_by.username if operation.created_by else 'System'
+        
+        message = f"""
+Transfer Validated
+
+Reference: {operation.reference_number}
+From: {source}
+To: {dest}
+Validated By: {user}
+Date: {operation.validated_at}
+
+Items:
+{lines_str}
+
+---
+StockMaster Inventory Management System
+"""
+        
+        recipient_list = [settings.MANAGER_EMAIL]
+        
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Failed to send transfer email: {e}")

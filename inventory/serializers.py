@@ -1,5 +1,15 @@
 from rest_framework import serializers
-from .models import Warehouse, Location, Category, Product, ProductStock, Operation, OperationLine, StockMovement
+from .models import Warehouse, Location, Category, Product, ProductStock, Operation, OperationLine, StockMovement, Partner, LowStockAlert
+
+class LowStockAlertSerializer(serializers.ModelSerializer):
+    product_sku = serializers.CharField(source='product.sku', read_only=True)
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    location_name = serializers.CharField(source='location.name', read_only=True)
+    warehouse_name = serializers.CharField(source='location.warehouse.name', read_only=True)
+
+    class Meta:
+        model = LowStockAlert
+        fields = '__all__'
 
 class WarehouseSerializer(serializers.ModelSerializer):
     class Meta:
@@ -37,6 +47,11 @@ class ProductStockSerializer(serializers.ModelSerializer):
         model = ProductStock
         fields = '__all__'
 
+class PartnerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Partner
+        fields = '__all__'
+
 class OperationLineSerializer(serializers.ModelSerializer):
     product_sku = serializers.CharField(source='product.sku', read_only=True)
     product_name = serializers.CharField(source='product.name', read_only=True)
@@ -50,6 +65,7 @@ class OperationSerializer(serializers.ModelSerializer):
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     source_location_name = serializers.CharField(source='source_location.name', read_only=True, allow_null=True)
     destination_location_name = serializers.CharField(source='destination_location.name', read_only=True, allow_null=True)
+    partner_name_display = serializers.CharField(source='partner.name', read_only=True, allow_null=True)
 
     class Meta:
         model = Operation

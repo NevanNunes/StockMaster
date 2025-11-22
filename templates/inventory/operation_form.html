@@ -19,6 +19,12 @@
                         <option value="ADJUSTMENT">Adjustment</option>
                     </select>
                 </div>
+                <div class="col-md-6" id="partner-container" style="display: none;">
+                    <label class="form-label" id="partner-label">Partner</label>
+                    <select class="form-select" id="partner">
+                        <option value="">Select Partner</option>
+                    </select>
+                </div>
             </div>
 
             <div class="row mb-3">
@@ -75,19 +81,24 @@
 <script>
     let products = [];
     let locations = [];
+    let partners = [];
 
     document.addEventListener('DOMContentLoaded', function () {
         Promise.all([
             fetch('/api/inventory/products/').then(r => r.json()),
-            fetch('/api/inventory/locations/').then(r => r.json())
-        ]).then(([prodData, locData]) => {
+            fetch('/api/inventory/locations/').then(r => r.json()),
+            fetch('/api/inventory/partners/').then(r => r.json())
+        ]).then(([prodData, locData, partnerData]) => {
             products = prodData.results || prodData;
             locations = locData.results || locData;
+            partners = partnerData.results || partnerData;
 
             populateLocations();
             populateProductSelects();
+            handleOperationTypeChange(); // Init state
         });
 
+        document.getElementById('operation_type').addEventListener('change', handleOperationTypeChange);
         document.getElementById('add-row').addEventListener('click', addRow);
 
         document.getElementById('lines-table').addEventListener('click', function (e) {
@@ -101,6 +112,31 @@
             createOperation();
         });
     });
+
+    function handleOperationTypeChange() {
+        const type = document.getElementById('operation_type').value;
+        const partnerContainer = document.getElementById('partner-container');
+        const partnerLabel = document.getElementById('partner-label');
+        const partnerSelect = document.getElementById('partner');
+
+        partnerSelect.innerHTML = '<option value="">Select Partner</option>';
+
+        if (type === 'RECEIPT') {
+            partnerContainer.style.display = 'block';
+            partnerLabel.innerText = 'Supplier';
+            partners.filter(p => p.partner_type === 'SUPPLIER').forEach(p => {
+                partnerSelect.add(new Option(p.name, p.id));
+            });
+        } else if (type === 'DELIVERY') {
+            partnerContainer.style.display = 'block';
+            partnerLabel.innerText = 'Customer';
+            partners.filter(p => p.partner_type === 'CUSTOMER').forEach(p => {
+                partnerSelect.add(new Option(p.name, p.id));
+            });
+        } else {
+            partnerContainer.style.display = 'none';
+        }
+    }
 
     function populateLocations() {
         const srcSelect = document.getElementById('source_location');
@@ -148,6 +184,7 @@
             operation_type: document.getElementById('operation_type').value,
             source_location: document.getElementById('source_location').value || null,
             destination_location: document.getElementById('destination_location').value || null,
+            partner: document.getElementById('partner').value || null,
             lines: lines
         };
 
@@ -161,7 +198,15 @@
         })
             .then(response => {
                 if (response.ok) {
-                    window.location.href = '/operations/receipts/'; // Redirect to list (simplification)
+                    // Redirect based on operation type
+                    const type = document.getElementById('operation_type').value;
+                    let redirectUrl = '/operations/';
+                    if (type === 'RECEIPT') redirectUrl += 'receipts/';
+                    else if (type === 'DELIVERY') redirectUrl += 'deliveries/';
+                    else if (type === 'TRANSFER') redirectUrl += 'transfers/';
+                    else if (type === 'ADJUSTMENT') redirectUrl += 'adjustments/';
+
+                    window.location.href = redirectUrl;
                 } else {
                     alert('Error creating operation');
                 }

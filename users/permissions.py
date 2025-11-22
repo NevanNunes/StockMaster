@@ -16,4 +16,5 @@ class IsManagerOrReadOnly(permissions.BasePermission):
             return request.user.is_authenticated
             
         # Edit/Delete permissions are only allowed to Managers
+        # Also explicitly check for 'validate' action if it's a custom action
         return request.user.is_authenticated and request.user.role == 'MANAGER'

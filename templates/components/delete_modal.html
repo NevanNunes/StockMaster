@@ -1,0 +1,26 @@
+<div id="delete-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Confirm Delete</h3>
+            <button type="button" class="btn-icon"
+                onclick="document.getElementById('delete-modal').classList.remove('show')">
+                <i data-feather="x"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+                <div
+                    style="width: 48px; height: 48px; background: #FEE2E2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; color: #DC2626;">
+                    <i data-feather="alert-triangle"></i>
+                </div>
+                <p style="font-size: 16px; color: #1F2937; margin-bottom: 8px;">Are you sure you want to delete <span
+                        class="delete-item-name" style="font-weight: 600;">this item</span>?</p>
+                <p style="font-size: 14px; color: #6B7280;">This action cannot be undone.</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary">Cancel</button>
+            <button type="button" class="btn btn-danger">Delete</button>
+        </div>
+    </div>
+</div>

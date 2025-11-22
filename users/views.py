@@ -37,7 +37,7 @@ class UserProfileView(APIView):
 
     def get(self, request):
         user = request.user
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -64,3 +64,7 @@ def login_page_view(request):
 
 def signup_page_view(request):
     return render(request, 'users/signup.html')
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')

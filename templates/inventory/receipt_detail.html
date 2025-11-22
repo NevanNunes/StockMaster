@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Receipt {{ receipt.reference }} - StockMaster{% endblock %}
+
+{% block page_title %}Receipt Details{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <h3 class="card-title">{{ receipt.reference }}</h3>
+            {% if receipt.status == 'draft' %}
+            <span class="badge badge-draft">Draft</span>
+            {% elif receipt.status == 'done' %}
+            <span class="badge badge-done">Done</span>
+            {% else %}
+            <span class="badge badge-warning">{{ receipt.status }}</span>
+            {% endif %}
+        </div>
+        <div style="display: flex; gap: 10px;">
+            {% if receipt.status == 'draft' %}
+            <a href="{% url 'receipt-update' receipt.pk %}" class="btn btn-secondary">
+                <i data-feather="edit-2"></i> Edit
+            </a>
+            <a href="{% url 'receipt-validate' receipt.pk %}" class="btn btn-primary">
+                <i data-feather="check-circle"></i> Validate
+            </a>
+            {% endif %}
+            <a href="{% url 'receipt-list' %}" class="btn btn-secondary">Back to List</a>
+        </div>
+    </div>
+
+    <div class="form-row" style="margin-bottom: 20px;">
+        <div style="flex: 1;">
+            <label class="text-muted" style="font-size: 12px;">Supplier</label>
+            <div style="font-weight: 500;">{{ receipt.supplier.name|default:"-" }}</div>
+        </div>
+        <div style="flex: 1;">
+            <label class="text-muted" style="font-size: 12px;">Warehouse</label>
+            <div style="font-weight: 500;">{{ receipt.warehouse.name }}</div>
+        </div>
+        <div style="flex: 1;">
+            <label class="text-muted" style="font-size: 12px;">Created By</label>
+            <div style="font-weight: 500;">{{ receipt.created_by.username }}</div>
+        </div>
+        <div style="flex: 1;">
+            <label class="text-muted" style="font-size: 12px;">Date</label>
+            <div style="font-weight: 500;">{{ receipt.created_at|date:"M d, Y H:i" }}</div>
+        </div>
+    </div>
+
+    {% if receipt.notes %}
+    <div style="margin-bottom: 20px;">
+        <label class="text-muted" style="font-size: 12px;">Notes</label>
+        <div style="background: #F9FAFB; padding: 12px; border-radius: 6px; color: #4B5563;">
+            {{ receipt.notes|linebreaks }}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div class="card-header" style="padding: 20px; border-bottom: 1px solid #E5E7EB; margin-bottom: 0;">
+        <h3 class="card-title">Items</h3>
+    </div>
+    <div class="table-container" style="border: none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>SKU</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in receipt.items.all %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td style="font-family: monospace;">{{ item.product.sku }}</td>
+                    <td style="font-weight: 600;">{{ item.quantity }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

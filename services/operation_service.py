@@ -3,6 +3,7 @@ from django.utils import timezone
 from typing import Optional
 from inventory.models import Operation, DocumentStatus
 from services.stock_service import StockService
+from services.notification_service import NotificationService
 
 class OperationService:
     """
@@ -192,6 +193,8 @@ class OperationService:
                     line.quantity_done = qty_to_process
                 
                 line.save()
+            
+            NotificationService.notify_transfer_validated(operation)
 
         elif operation.operation_type == Operation.Type.ADJUSTMENT:
             if not operation.source_location:

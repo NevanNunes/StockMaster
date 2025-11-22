@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if form.instance.pk %}Edit Receipt{% else %}Create Receipt{% endif %} - StockMaster{% endblock %}
+
+{% block page_title %}{% if form.instance.pk %}Edit Receipt{% else %}Create Receipt{% endif %}{% endblock %}
+
+{% block content %}
+<form method="POST">
+    {% csrf_token %}
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">General Information</h3>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="{{ form.supplier.id_for_label }}">Supplier</label>
+                {{ form.supplier }}
+                {% if form.supplier.errors %}
+                <div class="text-danger mt-1" style="font-size: 12px;">{{ form.supplier.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.warehouse.id_for_label }}">Warehouse</label>
+                {{ form.warehouse }}
+                {% if form.warehouse.errors %}
+                <div class="text-danger mt-1" style="font-size: 12px;">{{ form.warehouse.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.notes.id_for_label }}">Notes</label>
+            {{ form.notes }}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Items</h3>
+            <button type="button" id="add-row" class="btn btn-sm btn-secondary">
+                <i data-feather="plus"></i> Add Item
+            </button>
+        </div>
+
+        {{ items.management_form }}
+
+        <div class="table-container">
+            <table id="items-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th style="width: 150px;">Quantity</th>
+                        <th style="width: 50px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for form in items %}
+                    <tr>
+                        <td>
+                            {{ form.id }}
+                            {{ form.product }}
+                            {% if form.product.errors %}
+                            <div class="text-danger mt-1" style="font-size: 12px;">{{ form.product.errors }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ form.quantity }}
+                            {% if form.quantity.errors %}
+                            <div class="text-danger mt-1" style="font-size: 12px;">{{ form.quantity.errors }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if items.can_delete %}
+                            {{ form.DELETE }}
+                            {% endif %}
+                            <button type="button" class="btn-icon text-danger remove-row">
+                                <i data-feather="trash-2"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+        <a href="{% url 'receipt-list' %}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+            <i data-feather="save"></i> Save Receipt
+        </button>
+    </div>
+</form>
+
+<!-- Empty Row Template for JS -->
+<script type="text/template" id="empty-row">
+    <tr>
+        <td>
+            {{ items.empty_form.id }}
+            {{ items.empty_form.product }}
+        </td>
+        <td>
+            {{ items.empty_form.quantity }}
+        </td>
+        <td>
+            <button type="button" class="btn-icon text-danger remove-row">
+                <i data-feather="trash-2"></i>
+            </button>
+        </td>
+    </tr>
+</script>
+{% endblock %}

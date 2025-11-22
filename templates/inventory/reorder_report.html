@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Reorder Report</h3>
+    <button class="btn btn-primary" onclick="window.print()">
+        <i class="fas fa-print me-2"></i>Print
+    </button>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Current Stock</th>
+                        <th>Min Level</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="report-body">
+                    <tr>
+                        <td colspan="7" class="text-center">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        fetch('/api/inventory/reorder-report/')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('report-body');
+                tbody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center">No products need reordering.</td></tr>';
+                    return;
+                }
+
+                data.forEach(product => {
+                    const totalStock = product.total_stock !== undefined ? product.total_stock : 0;
+                    const minStock = product.min_stock_level;
+                    const diff = minStock - totalStock;
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${product.sku}</td>
+                            <td>${product.name}</td>
+                            <td>${product.category_name || '-'}</td>
+                            <td class="fw-bold text-danger">${totalStock}</td>
+                            <td>${minStock}</td>
+                            <td><span class="badge bg-danger">Low Stock</span></td>
+                            <td>
+                                <a href="#" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-shopping-cart me-1"></i>Order
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('report-body').innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error loading report.</td></tr>';
+            });
+    });
+</script>
+{% endblock %}

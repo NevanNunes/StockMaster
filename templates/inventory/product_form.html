@@ -1,109 +1,79 @@
 {% extends 'base.html' %}
 
+{% block title %}{% if form.instance.pk %}Edit Product{% else %}Add Product{% endif %} - StockMaster{% endblock %}
+
+{% block page_title %}{% if form.instance.pk %}Edit Product{% else %}Add Product{% endif %}{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Add Product</h3>
-    <a href="/products/" class="btn btn-secondary"><i class="fas fa-arrow-left me-2"></i>Back</a>
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+    <form method="POST">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-error">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="{{ form.name.id_for_label }}">Product Name</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                <div class="text-danger mt-1" style="font-size: 12px;">{{ form.name.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.sku.id_for_label }}">SKU</label>
+                {{ form.sku }}
+                {% if form.sku.errors %}
+                <div class="text-danger mt-1" style="font-size: 12px;">{{ form.sku.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="{{ form.category.id_for_label }}">Category</label>
+                {{ form.category }}
+                {% if form.category.errors %}
+                <div class="text-danger mt-1" style="font-size: 12px;">{{ form.category.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.unit.id_for_label }}">Unit</label>
+                {{ form.unit }}
+                {% if form.unit.errors %}
+                <div class="text-danger mt-1" style="font-size: 12px;">{{ form.unit.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.min_stock_level.id_for_label }}">Minimum Stock Level</label>
+            {{ form.min_stock_level }}
+            <small class="text-muted">Alerts will be triggered when stock falls below this amount.</small>
+            {% if form.min_stock_level.errors %}
+            <div class="text-danger mt-1" style="font-size: 12px;">{{ form.min_stock_level.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.description.id_for_label }}">Description</label>
+            {{ form.description }}
+            {% if form.description.errors %}
+            <div class="text-danger mt-1" style="font-size: 12px;">{{ form.description.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+            <a href="{% url 'product-list' %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+                <i data-feather="save"></i> Save Product
+            </button>
+        </div>
+    </form>
 </div>
-
-<div class="card shadow-sm border-0" style="max-width: 600px;">
-    <div class="card-body">
-        <form id="product-form">
-            <div class="mb-3">
-                <label for="name" class="form-label">Product Name</label>
-                <input type="text" class="form-control" id="name" required>
-            </div>
-            <div class="mb-3">
-                <label for="sku" class="form-label">SKU / Code</label>
-                <input type="text" class="form-control" id="sku" required>
-            </div>
-            <div class="mb-3">
-                <label for="category" class="form-label">Category</label>
-                <select class="form-select" id="category">
-                    <option value="">Select Category</option>
-                    <!-- Populated by JS -->
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="uom" class="form-label">Unit of Measure</label>
-                <input type="text" class="form-control" id="uom" placeholder="e.g. kg, pcs" required>
-            </div>
-            <div class="mb-3">
-                <label for="min_stock" class="form-label">Minimum Stock Level</label>
-                <input type="number" class="form-control" id="min_stock" value="0">
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Save Product</button>
-        </form>
-    </div>
-</div>
-
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        fetchCategories();
-
-        document.getElementById('product-form').addEventListener('submit', function (e) {
-            e.preventDefault();
-            createProduct();
-        });
-    });
-
-    function fetchCategories() {
-        fetch('/api/inventory/categories/')
-            .then(response => response.json())
-            .then(data => {
-                const select = document.getElementById('category');
-                const results = data.results || data;
-                results.forEach(cat => {
-                    const option = document.createElement('option');
-                    option.value = cat.id;
-                    option.textContent = cat.name;
-                    select.appendChild(option);
-                });
-            });
-    }
-
-    function createProduct() {
-        const data = {
-            name: document.getElementById('name').value,
-            sku: document.getElementById('sku').value,
-            category: document.getElementById('category').value || null,
-            uom: document.getElementById('uom').value,
-            min_stock_level: document.getElementById('min_stock').value
-        };
-
-        fetch('/api/inventory/products/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(data)
-        })
-            .then(response => {
-                if (response.ok) {
-                    window.location.href = '/products/';
-                } else {
-                    alert('Error creating product');
-                }
-            });
-    }
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-</script>
 {% endblock %}

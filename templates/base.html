@@ -5,123 +5,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockMaster - Inventory Management</title>
+    <title>{% block title %}StockMaster{% endblock %}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
     <!-- Custom CSS -->
-    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
 </head>
 
 <body>
-    <div class="d-flex" id="wrapper">
+    <div class="wrapper">
         <!-- Sidebar -->
-        <div class="bg-dark text-white" id="sidebar-wrapper">
-            <div class="sidebar-heading text-center py-4 primary-text fs-4 fw-bold text-uppercase border-bottom">
-                <i class="fas fa-boxes me-2"></i>StockMaster
+        <nav id="sidebar">
+            <div class="sidebar-header">
+                <h3>StockMaster</h3>
             </div>
-            <div class="list-group list-group-flush my-3">
-                <a href="/" class="list-group-item list-group-item-action bg-transparent second-text active">
-                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-                </a>
-                <a href="/products/" class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
-                    <i class="fas fa-box-open me-2"></i>Products
-                </a>
-                <a href="/operations/receipts/"
-                    class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
-                    <i class="fas fa-truck-loading me-2"></i>Receipts
-                </a>
-                <a href="/operations/deliveries/"
-                    class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
-                    <i class="fas fa-truck me-2"></i>Deliveries
-                </a>
-                <a href="/operations/transfers/"
-                    class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
-                    <i class="fas fa-exchange-alt me-2"></i>Transfers
-                </a>
-                <a href="/operations/adjustments/"
-                    class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
-                    <i class="fas fa-clipboard-check me-2"></i>Adjustments
-                </a>
-                <a href="/stock-ledger/"
-                    class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
-                    <i class="fas fa-history me-2"></i>Move History
-                </a>
-            </div>
-        </div>
-        <!-- /#sidebar-wrapper -->
 
-        <!-- Page Content -->
-        <div id="page-content-wrapper">
-            <nav class="navbar navbar-expand-lg navbar-light bg-transparent py-4 px-4">
+            <div class="menu-header">Main</div>
+
+            <a href="{% url 'home' %}" class="sidebar-link {% if request.path == '/' %}active{% endif %}">
+                <i data-feather="home"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="{% url 'product-list' %}"
+                class="sidebar-link {% if 'products' in request.path %}active{% endif %}">
+                <i data-feather="package"></i>
+                <span>Products</span>
+            </a>
+
+            <div class="menu-header">Operations</div>
+
+            <a href="{% url 'receipt-list' %}"
+                class="sidebar-link {% if 'receipts' in request.path %}active{% endif %}">
+                <i data-feather="arrow-down-circle"></i>
+                <span>Receipts</span>
+            </a>
+
+            <a href="{% url 'delivery-list' %}"
+                class="sidebar-link {% if 'deliveries' in request.path %}active{% endif %}">
+                <i data-feather="truck"></i>
+                <span>Deliveries</span>
+            </a>
+
+            <a href="{% url 'transfer-list' %}"
+                class="sidebar-link {% if 'transfers' in request.path %}active{% endif %}">
+                <i data-feather="repeat"></i>
+                <span>Transfers</span>
+            </a>
+
+            <a href="{% url 'adjustment-list' %}"
+                class="sidebar-link {% if 'adjustments' in request.path %}active{% endif %}">
+                <i data-feather="sliders"></i>
+                <span>Adjustments</span>
+            </a>
+
+            <div class="menu-header">Reports</div>
+
+            <a href="{% url 'stock-ledger' %}" class="sidebar-link {% if 'ledger' in request.path %}active{% endif %}">
+                <i data-feather="file-text"></i>
+                <span>Stock Ledger</span>
+            </a>
+
+            <div class="sidebar-divider"></div>
+
+            <a href="#" class="sidebar-link">
+                <i data-feather="settings"></i>
+                <span>Settings</span>
+            </a>
+
+            <div class="sidebar-footer">
+                {% if user.is_authenticated %}
+                <div class="sidebar-link" style="padding-left: 0;">
+                    <i data-feather="user"></i>
+                    <span>{{ user.username }}</span>
+                </div>
+                <a href="#" onclick="document.getElementById('logout-form').submit();" class="sidebar-link"
+                    style="padding-left: 0; color: #EF4444;">
+                    <i data-feather="log-out"></i>
+                    <span>Logout</span>
+                </a>
+                <form id="logout-form" action="{% url 'logout' %}" method="POST" style="display: none;">
+                    {% csrf_token %}
+                </form>
+                {% else %}
+                <a href="{% url 'login' %}" class="sidebar-link">
+                    <i data-feather="log-in"></i>
+                    <span>Login</span>
+                </a>
+                {% endif %}
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div id="content">
+            <!-- Top Navbar -->
+            <nav class="top-navbar">
                 <div class="d-flex align-items-center">
-                    <i class="fas fa-align-left primary-text fs-4 me-3" id="menu-toggle"></i>
-                    <h2 class="fs-2 m-0">Dashboard</h2>
+                    <button id="menu-toggle" class="nav-icon-btn d-lg-none" style="margin-right: 15px; display: none;">
+                        <i data-feather="menu"></i>
+                    </button>
+                    <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
                 </div>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
-                    aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+                <div class="nav-right">
+                    <!-- Search (Optional) -->
+                    <!-- <div class="search-box">...</div> -->
 
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                        {% if user.is_authenticated %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle second-text fw-bold" href="#" id="navbarDropdown"
-                                role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user me-2"></i>{{ user.username }}
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                <li><a class="dropdown-item" href="#">Profile</a></li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
-                                <li><a class="dropdown-item" href="#" onclick="logout()">Logout</a></li>
-                            </ul>
-                        </li>
-                        {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link fw-bold" href="{% url 'login-page' %}">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link fw-bold" href="{% url 'signup-page' %}">Sign Up</a>
-                        </li>
-                        {% endif %}
-                    </ul>
+                    <!-- Notifications -->
+                    <button class="nav-icon-btn">
+                        <i data-feather="bell"></i>
+                        <span class="badge-dot"></span>
+                    </button>
+
+                    <!-- User Menu -->
+                    <div class="user-menu">
+                        <div class="user-avatar">
+                            {% if user.is_authenticated %}
+                            {{ user.username|make_list|first|upper }}
+                            {% else %}
+                            ?
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </nav>
 
-            <div class="container-fluid px-4">
+            <!-- Content Area -->
+            <div class="main-content">
+                <!-- Alerts -->
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                    <span>{{ message }}</span>
+                    <button class="alert-close"><i data-feather="x"></i></button>
+                </div>
+                {% endfor %}
+                {% endif %}
+
                 {% block content %}
                 {% endblock %}
             </div>
         </div>
     </div>
-    <!-- /#page-content-wrapper -->
 
+    <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{% static 'js/app.js' %}"></script>
-    <script>
-        async function logout() {
-            try {
-                const response = await fetch('/users/api/logout/', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    }
-                });
-                if (response.ok) {
-                    localStorage.removeItem('user');
-                    window.location.href = '/users/login/';
-                }
-            } catch (error) {
-                console.error('Logout failed', error);
-            }
-        }
-    </script>
+
+    <!-- Scripts -->
+    <script src="{% static 'js/main.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 

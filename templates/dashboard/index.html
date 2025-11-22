@@ -44,6 +44,29 @@
     </div>
 </div>
 
+<div class="row my-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="mb-0">Stock by Category</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="stockByCategoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="mb-0">Top Moving Products (30 Days)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="topMoversChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row my-5">
     <h3 class="fs-4 mb-3">Recent Operations</h3>
     <div class="col">
@@ -66,10 +89,12 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         fetchDashboardData();
         fetchRecentOperations();
+        fetchCharts();
     });
 
     function fetchDashboardData() {
@@ -84,13 +109,63 @@
             .catch(error => console.error('Error fetching KPIs:', error));
     }
 
+    function fetchCharts() {
+        fetch('/api/dashboard/charts/')
+            .then(response => response.json())
+            .then(data => {
+                renderStockByCategory(data.stock_by_category);
+                renderTopMovers(data.top_movers);
+            })
+            .catch(error => console.error('Error fetching charts:', error));
+    }
+
+    function renderStockByCategory(data) {
+        const ctx = document.getElementById('stockByCategoryChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.map(item => item.category__name || 'Uncategorized'),
+                datasets: [{
+                    data: data.map(item => item.total_qty),
+                    backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#5a5c69']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    function renderTopMovers(data) {
+        const ctx = document.getElementById('topMoversChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(item => item.product__name),
+                datasets: [{
+                    label: 'Quantity Moved',
+                    data: data.map(item => item.total_qty),
+                    backgroundColor: '#4e73df'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
     function fetchRecentOperations() {
         fetch('/api/inventory/operations/?limit=5')
             .then(response => response.json())
             .then(data => {
                 const tbody = document.getElementById('recent-ops-table');
                 tbody.innerHTML = '';
-                const results = data.results || data; // Handle pagination or list
+                const results = data.results || data;
 
                 results.forEach((op, index) => {
                     const row = `

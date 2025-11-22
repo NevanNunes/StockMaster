@@ -10,6 +10,21 @@ class Warehouse(models.Model):
     def __str__(self):
         return self.name
 
+class Partner(models.Model):
+    class Type(models.TextChoices):
+        CUSTOMER = 'CUSTOMER', 'Customer'
+        SUPPLIER = 'SUPPLIER', 'Supplier'
+
+    name = models.CharField(max_length=100)
+    partner_type = models.CharField(max_length=20, choices=Type.choices)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    address = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.partner_type})"
+
 class Location(models.Model):
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='locations')
     name = models.CharField(max_length=50) # e.g., "Rack A", "Shelf 1"
@@ -75,7 +90,8 @@ class Operation(models.Model):
     destination_location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True, related_name='incoming_operations')
     
     # For receipts/deliveries
-    partner_name = models.CharField(max_length=100, blank=True, help_text="Supplier or Customer Name")
+    partner_name = models.CharField(max_length=100, blank=True, help_text="Legacy field for free text name")
+    partner = models.ForeignKey(Partner, on_delete=models.SET_NULL, null=True, blank=True, related_name='operations')
 
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -133,6 +149,7 @@ class LowStockAlert(models.Model):
     current_quantity = models.DecimalField(max_digits=10, decimal_places=2)
     threshold = models.DecimalField(max_digits=10, decimal_places=2)
     is_resolved = models.BooleanField(default=False)
+    is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
 
