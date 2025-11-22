@@ -119,6 +119,26 @@ class StockMovement(models.Model):
     reference_doc = models.ForeignKey(Operation, on_delete=models.SET_NULL, null=True, blank=True)
     timestamp = models.DateTimeField(default=timezone.now)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    
+    # New fields for enhanced tracking
+    balance_after = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    notes = models.TextField(blank=True)
 
     def __str__(self):
         return f"{self.timestamp} - {self.product.sku}: {self.quantity}"
+
+class LowStockAlert(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='alerts')
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='alerts')
+    current_quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    threshold = models.DecimalField(max_digits=10, decimal_places=2)
+    is_resolved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('product', 'location', 'is_resolved')
+
+    def __str__(self):
+        status = "Resolved" if self.is_resolved else "Active"
+        return f"ALERT: {self.product.sku} @ {self.location.code} ({status})"
