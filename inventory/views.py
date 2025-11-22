@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from .models import Warehouse, Location, Category, Product, Operation, StockMovement, DocumentStatus
 from .serializers import (
     WarehouseSerializer, LocationSerializer, CategorySerializer, 
@@ -45,6 +47,7 @@ class OperationViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=None)
 
     @action(detail=True, methods=['post'])
+    @method_decorator(csrf_exempt)
     def validate(self, request, pk=None):
         try:
             # Pass None for user if not authenticated
@@ -75,10 +78,11 @@ class OperationViewSet(viewsets.ModelViewSet):
         # Generate PDF
         pdf_buffer = generate_operation_pdf(operation)
         
-        # Return as downloadable file
-        response = HttpResponse(pdf_buffer, content_type='application/pdf')
+        # Return as downloadable file with proper filename
+        pdf_bytes = pdf_buffer.getvalue()
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{operation.reference_number}.pdf"'
-        return response        
+        return response
 
 class StockMovementViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = StockMovement.objects.all().order_by('-timestamp')

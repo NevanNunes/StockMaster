@@ -5,6 +5,8 @@
     <h3>Operation: <span id="op-ref"></span></h3>
     <div>
         <button id="validate-btn" class="btn btn-success me-2" style="display: none;">Validate</button>
+        <a id="pdf-btn" href="/api/inventory/operations/{{ op_id }}/pdf/" class="btn btn-primary me-2"
+            style="display: none;"><i class="fas fa-file-pdf me-2"></i>Download PDF</a>
         <a href="/operations/receipts/" class="btn btn-secondary">Back</a>
     </div>
 </div>
@@ -46,6 +48,10 @@
         </table>
     </div>
 </div>
+
+<div style="display:none;">
+    {% csrf_token %}
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -83,6 +89,8 @@
 
                 if (data.status === 'DRAFT' || data.status === 'WAITING') {
                     document.getElementById('validate-btn').style.display = 'inline-block';
+                } else if (data.status === 'DONE') {
+                    document.getElementById('pdf-btn').style.display = 'inline-block';
                 }
             });
     }
@@ -90,18 +98,32 @@
     function validateOperation() {
         if (!confirm('Are you sure you want to validate this operation? This will update stock levels.')) return;
 
+        const csrftoken = getCookie('csrftoken');
+
         fetch(`/api/inventory/operations/${opId}/validate/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json'
             }
         })
-            .then(response => {
+            .then(async response => {
                 if (response.ok) {
                     location.reload();
                 } else {
-                    response.json().then(data => alert('Error: ' + data.error));
+                    const text = await response.text();
+                    try {
+                        const data = JSON.parse(text);
+                        alert('Error: ' + (data.error || JSON.stringify(data)));
+                    } catch (e) {
+                        console.error('Non-JSON response:', text);
+                        alert('Error: Server returned ' + response.status + '. Check console for details.');
+                    }
                 }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                alert('Network error occurred.');
             });
     }
 
