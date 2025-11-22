@@ -3,11 +3,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
-from .models import Warehouse, Location, Category, Product, Operation, StockMovement
+from django.http import HttpResponse
+from .models import Warehouse, Location, Category, Product, Operation, StockMovement, DocumentStatus
 from .serializers import (
     WarehouseSerializer, LocationSerializer, CategorySerializer, 
     ProductSerializer, OperationSerializer, StockMovementSerializer
 )
+from .utils import generate_operation_pdf
 from services.operation_service import OperationService
 
 class WarehouseViewSet(viewsets.ModelViewSet):
@@ -54,6 +56,29 @@ class OperationViewSet(viewsets.ModelViewSet):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """
+        Generate and download PDF for this operation.
+        URL: /api/inventory/operations/<id>/pdf/
+        """
+        operation = self.get_object()
+        
+        # Only allow PDF for validated operations
+        if operation.status != DocumentStatus.DONE:
+            return Response(
+                {'error': 'PDF only available for validated operations'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Generate PDF
+        pdf_buffer = generate_operation_pdf(operation)
+        
+        # Return as downloadable file
+        response = HttpResponse(pdf_buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{operation.reference_number}.pdf"'
+        return response        
 
 class StockMovementViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = StockMovement.objects.all().order_by('-timestamp')
