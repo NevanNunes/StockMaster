@@ -213,3 +213,5 @@ class OperationService:
         operation.validated_at = timezone.now()
         operation.save()
         return operation
+
+

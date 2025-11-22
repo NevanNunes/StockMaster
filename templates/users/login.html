@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Login</h3>
+                </div>
+                <div class="card-body">
+                    <div id="error-message" class="alert alert-danger d-none"></div>
+                    <form id="login-form">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Login</button>
+                    </form>
+                    <div class="mt-3 text-center">
+                        <p>Don't have an account? <a href="{% url 'signup-page' %}">Sign up here</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('login-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+        const errorMessage = document.getElementById('error-message');
+
+        try {
+            const response = await fetch('/users/api/login/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                // Save user info to localStorage for UI logic
+                localStorage.setItem('user', JSON.stringify(result));
+                window.location.href = '/';
+            } else {
+                errorMessage.textContent = result.error || 'Login failed';
+                errorMessage.classList.remove('d-none');
+            }
+        } catch (error) {
+            errorMessage.textContent = 'An error occurred. Please try again.';
+            errorMessage.classList.remove('d-none');
+        }
+    });
+</script>
+{% endblock %}

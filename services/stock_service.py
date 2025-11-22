@@ -4,6 +4,7 @@ from django.utils import timezone
 from decimal import Decimal
 from typing import Optional
 from inventory.models import Product, Location, ProductStock, StockMovement, Operation, LowStockAlert
+from services.notification_service import NotificationService
 
 class StockService:
     """
@@ -29,6 +30,7 @@ class StockService:
     def _check_and_create_low_stock_alert(product: Product, location: Location, current_qty: Decimal) -> None:
         """
         Checks if stock is below threshold and creates an active alert if one doesn't exist.
+        Also sends email notification to manager.
         """
         if current_qty <= product.min_stock_level:
             # Check if there is already an active alert
@@ -45,6 +47,9 @@ class StockService:
                     current_quantity=current_qty,
                     threshold=product.min_stock_level
                 )
+                
+                # Send email notification
+                NotificationService.notify_low_stock(product, location, current_qty)
 
     @staticmethod
     def _resolve_low_stock_alert(product: Product, location: Location, current_qty: Decimal) -> None:

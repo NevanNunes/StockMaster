@@ -21,7 +21,16 @@ from dashboard.views import dashboard_view
 urlpatterns = [
     path('', dashboard_view, name='home'),
     path('admin/', admin.site.urls),
-    path('api/inventory/', include('inventory.urls')),
+    
+    # UI Routes
+    path('products/', include('inventory.urls')),
+    path('operations/', include('inventory.operation_urls')),
+    path('stock-ledger/', include('inventory.ledger_urls')),
+    
+    # API Routes
+    path('api/inventory/', include('inventory.api_urls')),
     path('api/dashboard/', include('dashboard.urls')),
-    path('', include('inventory.urls')),
+    
+    # Users App (API + UI)
+    path('users/', include('users.urls')),
 ]

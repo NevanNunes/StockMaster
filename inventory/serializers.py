@@ -54,9 +54,15 @@ class OperationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Operation
         fields = '__all__'
-        read_only_fields = ['reference_number', 'status', 'created_by', 'created_at', 'updated_at', 'validated_at']
+        read_only_fields = ['reference_number', 'created_by', 'created_at', 'updated_at', 'validated_at']
 
     def create(self, validated_data):
+        # Check if auto-validation is requested
+        should_validate = validated_data.get('status') == 'DONE'
+        
+        if should_validate:
+            validated_data['status'] = 'DRAFT' # Force draft first
+            
         lines_data = validated_data.pop('lines')
         operation = Operation.objects.create(**validated_data)
         
@@ -66,6 +72,23 @@ class OperationSerializer(serializers.ModelSerializer):
 
         for line_data in lines_data:
             OperationLine.objects.create(operation=operation, **line_data)
+            
+        if should_validate:
+            from services.operation_service import OperationService
+            # Get user from context
+            request = self.context.get('request')
+            user = request.user if request and request.user.is_authenticated else None
+            
+            try:
+                OperationService.validate_operation(operation.id, user=user)
+                operation.refresh_from_db()
+            except Exception as e:
+                # If validation fails, we should probably rollback or at least return the error
+                # But create() must return the instance.
+                # We'll leave it as DRAFT and maybe log the error?
+                # Or re-raise? If we re-raise, the transaction (if any) might rollback.
+                # DRF's create is usually atomic if configured, but let's assume we want to fail hard if validation fails.
+                raise serializers.ValidationError(f"Auto-validation failed: {str(e)}")
         
         return operation
 

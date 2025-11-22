@@ -14,33 +14,52 @@ from .serializers import (
 from .utils import generate_operation_pdf
 from services.operation_service import OperationService
 
+from rest_framework.permissions import IsAuthenticated
+from users.permissions import IsManagerOrReadOnly
+
 class WarehouseViewSet(viewsets.ModelViewSet):
     queryset = Warehouse.objects.all()
     serializer_class = WarehouseSerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     filterset_fields = ['warehouse']
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     filterset_fields = ['category']
+
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
+from .filters import OperationFilter
 
 class OperationViewSet(viewsets.ModelViewSet):
     queryset = Operation.objects.all().order_by('-created_at')
     serializer_class = OperationSerializer
+    permission_classes = [IsAuthenticated, IsManagerOrReadOnly]
     # permission_classes = [IsAuthenticated]
-    filterset_fields = ['operation_type', 'status']
+    
+    # Add filter backends
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    
+    # Use custom FilterSet
+    filterset_class = OperationFilter
+    
+    # Enable search
+    search_fields = ['reference_number', 'partner_name']
+    
+    # Enable ordering
+    ordering_fields = ['created_at', 'updated_at', 'status']
 
     def perform_create(self, serializer):
         # For now, allow creation without user

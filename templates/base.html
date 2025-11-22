@@ -1,5 +1,7 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +13,7 @@
     <!-- Custom CSS -->
     <link href="/static/css/style.css" rel="stylesheet">
 </head>
+
 <body>
     <div class="d-flex" id="wrapper">
         <!-- Sidebar -->
@@ -25,23 +28,25 @@
                 <a href="/products/" class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
                     <i class="fas fa-box-open me-2"></i>Products
                 </a>
-                <a href="/operations/receipts/" class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
+                <a href="/operations/receipts/"
+                    class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
                     <i class="fas fa-truck-loading me-2"></i>Receipts
                 </a>
-                <a href="/operations/deliveries/" class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
+                <a href="/operations/deliveries/"
+                    class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
                     <i class="fas fa-truck me-2"></i>Deliveries
                 </a>
-                <a href="/operations/transfers/" class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
+                <a href="/operations/transfers/"
+                    class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
                     <i class="fas fa-exchange-alt me-2"></i>Transfers
                 </a>
-                <a href="/operations/adjustments/" class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
+                <a href="/operations/adjustments/"
+                    class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
                     <i class="fas fa-clipboard-check me-2"></i>Adjustments
                 </a>
-                <a href="/stock-ledger/" class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
+                <a href="/stock-ledger/"
+                    class="list-group-item list-group-item-action bg-transparent second-text fw-bold">
                     <i class="fas fa-history me-2"></i>Move History
-                </a>
-                <a href="#" class="list-group-item list-group-item-action bg-transparent text-danger fw-bold">
-                    <i class="fas fa-power-off me-2"></i>Logout
                 </a>
             </div>
         </div>
@@ -63,17 +68,28 @@
 
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                        {% if user.is_authenticated %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle second-text fw-bold" href="#" id="navbarDropdown"
                                 role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user me-2"></i>User
+                                <i class="fas fa-user me-2"></i>{{ user.username }}
                             </a>
-                            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                                 <li><a class="dropdown-item" href="#">Profile</a></li>
-                                <li><a class="dropdown-item" href="#">Settings</a></li>
-                                <li><a class="dropdown-item" href="#">Logout</a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item" href="#" onclick="logout()">Logout</a></li>
                             </ul>
                         </li>
+                        {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link fw-bold" href="{% url 'login-page' %}">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link fw-bold" href="{% url 'signup-page' %}">Sign Up</a>
+                        </li>
+                        {% endif %}
                     </ul>
                 </div>
             </nav>
@@ -87,7 +103,26 @@
     <!-- /#page-content-wrapper -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/app.js"></script>
+    <script src="{% static 'js/app.js' %}"></script>
+    <script>
+        async function logout() {
+            try {
+                const response = await fetch('/users/api/logout/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                });
+                if (response.ok) {
+                    localStorage.removeItem('user');
+                    window.location.href = '/users/login/';
+                }
+            } catch (error) {
+                console.error('Logout failed', error);
+            }
+        }
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
+
 </html>

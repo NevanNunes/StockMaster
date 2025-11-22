@@ -29,12 +29,51 @@
     </div>
 </div>
 
+<!-- Quick Stock In Modal -->
+<div class="modal fade" id="stockInModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Quick Stock In</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="stockInForm">
+                    <input type="hidden" id="stockInProductId">
+                    <div class="mb-3">
+                        <label class="form-label">Product</label>
+                        <input type="text" class="form-control" id="stockInProductName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="stockInQuantity" required min="1">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Destination Location</label>
+                        <select class="form-select" id="stockInLocation" required>
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitStockIn()">Confirm Stock In</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    let stockInModal;
+
     document.addEventListener('DOMContentLoaded', function () {
         fetchProducts();
+        fetchLocations();
+        stockInModal = new bootstrap.Modal(document.getElementById('stockInModal'));
     });
 
     function fetchProducts() {
@@ -59,7 +98,11 @@
                                 </span>
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-outline-primary me-1" title="Edit"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-outline-success" title="Stock In" 
+                                    onclick="openStockInModal(${product.id}, '${product.name}')">
+                                    <i class="fas fa-plus"></i>
+                                </button>
                             </td>
                         </tr>
                     `;
@@ -67,6 +110,107 @@
                 });
             })
             .catch(error => console.error('Error fetching products:', error));
+    }
+
+    function fetchLocations() {
+        fetch('/api/inventory/locations/')
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('stockInLocation');
+                select.innerHTML = '';
+                const results = data.results || data;
+                results.forEach(loc => {
+                    select.innerHTML += `<option value="${loc.id}">${loc.name} (${loc.warehouse_name || 'Warehouse'})</option>`;
+                });
+            });
+    }
+
+    function openStockInModal(id, name) {
+        document.getElementById('stockInProductId').value = id;
+        document.getElementById('stockInProductName').value = name;
+        document.getElementById('stockInQuantity').value = '';
+        stockInModal.show();
+    }
+
+    function submitStockIn() {
+        const productId = document.getElementById('stockInProductId').value;
+        const qty = document.getElementById('stockInQuantity').value;
+        const locationId = document.getElementById('stockInLocation').value;
+        const confirmButton = document.querySelector('#stockInModal .btn-success');
+
+        if (!qty || !locationId) {
+            alert("Please fill all fields");
+            return;
+        }
+        confirmButton.disabled = true;
+        confirmButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Working...';
+
+        const payload = {
+            operation_type: 'RECEIPT',
+            partner_name: 'Quick Stock In',
+            status: 'DONE', // Auto-validate
+            destination_location: locationId,
+            lines: [
+                {
+                    product: productId,
+                    quantity_demanded: qty,
+                    quantity_done: qty
+                }
+            ]
+        };
+
+        fetch('/api/inventory/operations/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(response => {
+                stockInModal.hide();
+                if (response.ok) {
+                    fetchProducts(); // Refresh list
+                    showTemporaryMessage('Stock increased successfully!', 'success');
+                } else {
+                    response.json().then(data => showTemporaryMessage('Error: ' + JSON.stringify(data), 'danger'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showTemporaryMessage('An error occurred.', 'danger');
+            })
+            .finally(() => {
+                confirmButton.disabled = false;
+                confirmButton.innerHTML = 'Confirm Stock In';
+            });
+    }
+
+    function showTemporaryMessage(message, type) {
+        const container = document.querySelector('.container-fluid.px-4');
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.role = 'alert';
+        alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+        container.prepend(alertDiv);
+        setTimeout(() => {
+            bootstrap.Alert.getOrCreateInstance(alertDiv).close();
+        }, 3000);
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
 </script>
 {% endblock %}
