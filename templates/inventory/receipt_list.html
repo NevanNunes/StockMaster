@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}Receipts - StockMaster{% endblock %}
+{% block page_title %}Receipts{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <form method="GET" class="flex gap-2" style="flex: 1; min-width: 300px;">
+
+            <select name="status" style="width: 150px;">
+                <option value="">All Statuses</option>
+                <option value="draft" {% if request.GET.status=="draft" %}selected{% endif %}>
+                    Draft
+                </option>
+                <option value="waiting" {% if request.GET.status=="waiting" %}selected{% endif %}>
+                    Waiting
+                </option>
+                <option value="ready" {% if request.GET.status=="ready" %}selected{% endif %}>
+                    Ready
+                </option>
+                <option value="done" {% if request.GET.status=="done" %}selected{% endif %}>
+                    Done
+                </option>
+                <option value="canceled" {% if request.GET.status=="canceled" %}selected{% endif %}>
+                    Canceled
+                </option>
+            </select>
+            <button type="submit" class="btn btn-secondary">Filter</button>
+        </form>
+
+        <a href="{% url 'receipt-create' %}" class="btn btn-primary">
+            <i data-feather="plus"></i> Create Receipt
+        </a>
+    </div>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Supplier</th>
+                    <th>Warehouse</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for receipt in receipts %}
+                <tr>
+                    <td style="font-family: monospace; font-weight: 500;">
+                        <a href="{% url 'receipt-detail' receipt.pk %}" class="text-primary">
+                            {{ receipt.reference }}
+                        </a>
+                    </td>
+
+                    <td>{{ receipt.supplier.name|default:"-" }}</td>
+                    <td>{{ receipt.warehouse.name }}</td>
+                    <td>{{ receipt.created_at|date:"M d, Y" }}</td>
+
+                    <td>
+                        {% if receipt.status == 'draft' %}
+                        <span class="badge badge-draft">Draft</span>
+                        {% elif receipt.status == 'waiting' %}
+                        <span class="badge badge-waiting">Waiting</span>
+                        {% elif receipt.status == 'ready' %}
+                        <span class="badge badge-ready">Ready</span>
+                        {% elif receipt.status == 'done' %}
+                        <span class="badge badge-done">Done</span>
+                        {% elif receipt.status == 'canceled' %}
+                        <span class="badge badge-canceled">Canceled</span>
+                        {% else %}
+                        <span class="badge">{{ receipt.status }}</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="text-right">
+                        <a href="{% url 'receipt-detail' receipt.pk %}" class="btn-icon" title="View">
+                            <i data-feather="eye" style="width: 16px; height: 16px;"></i>
+                        </a>
+
+                        {% if receipt.status == 'draft' %}
+                        <a href="{% url 'receipt-update' receipt.pk %}" class="btn-icon" title="Edit">
+                            <i data-feather="edit-2" style="width: 16px; height: 16px;"></i>
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                {% empty %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <i data-feather="arrow-down-circle"></i>
+                            <h3>No receipts found</h3>
+                            <p>Create a receipt to record incoming stock.</p>
+                            <a href="{% url 'receipt-create' %}" class="btn btn-primary mt-2">
+                                Create Receipt
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if is_paginated %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+        class="page-link">&laquo;</a>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+    {% if num == page_obj.number %}
+    <span class="page-link active">{{ num }}</span>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <a
+        href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="page-link">
+        {{ num }}</a>
+        {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}"
+            class="page-link">&raquo;</a>
+        {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

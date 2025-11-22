@@ -1,9 +1,36 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ page_title }} - StockMaster{% endblock %}
+{% block page_title %}<span id="page-title">Operations</span>{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 id="page-title">Operations</h3>
-    <a href="/operations/add/" class="btn btn-primary"><i class="fas fa-plus me-2"></i>Create New</a>
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-md-3">
+                <input type="text" id="search-input" class="form-control" placeholder="Search Ref, Partner, SKU...">
+            </div>
+            <div class="col-md-2">
+                <input type="date" id="start-date" class="form-control" placeholder="Start Date">
+            </div>
+            <div class="col-md-2">
+                <input type="date" id="end-date" class="form-control" placeholder="End Date">
+            </div>
+            <div class="col-md-2">
+                <select id="status-filter" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="WAITING">Waiting</option>
+                    <option value="READY">Ready</option>
+                    <option value="DONE">Done</option>
+                    <option value="CANCELED">Canceled</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button onclick="applyFilters()" class="btn btn-primary w-100">Apply Filters</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="card shadow-sm border-0">
@@ -16,6 +43,7 @@
                         <th>Type</th>
                         <th>Source</th>
                         <th>Destination</th>
+                        <th>Partner</th>
                         <th>Status</th>
                         <th>Created At</th>
                         <th>Actions</th>
@@ -50,18 +78,41 @@
         }
     }
 
+    function applyFilters() {
+        fetchOperations();
+    }
+
     function fetchOperations() {
-        let url = '/api/inventory/operations/';
-        if (opType) {
-            url += `?operation_type=${opType}`;
+        let url = '/api/inventory/operations/?';
+        const params = new URLSearchParams();
+
+        if (opType && opType !== 'None') {
+            params.append('operation_type', opType);
         }
 
-        fetch(url)
+        const search = document.getElementById('search-input').value;
+        if (search) params.append('search', search);
+
+        const startDate = document.getElementById('start-date').value;
+        if (startDate) params.append('start_date', startDate);
+
+        const endDate = document.getElementById('end-date').value;
+        if (endDate) params.append('end_date', endDate);
+
+        const status = document.getElementById('status-filter').value;
+        if (status) params.append('status', status);
+
+        fetch(url + params.toString())
             .then(response => response.json())
             .then(data => {
                 const tbody = document.getElementById('ops-table-body');
                 tbody.innerHTML = '';
                 const results = data.results || data;
+
+                if (results.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center">No operations found</td></tr>';
+                    return;
+                }
 
                 results.forEach(op => {
                     const row = `
@@ -70,6 +121,7 @@
                             <td>${op.operation_type}</td>
                             <td>${op.source_location_name || '-'}</td>
                             <td>${op.destination_location_name || '-'}</td>
+                            <td>${op.partner_name_display || op.partner_name || '-'}</td>
                             <td><span class="badge bg-${getStatusColor(op.status)}">${op.status}</span></td>
                             <td>${new Date(op.created_at).toLocaleDateString()}</td>
                             <td>
