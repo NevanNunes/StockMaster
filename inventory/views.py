@@ -11,7 +11,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
-from .models import Warehouse, Location, Category, Product, Operation, StockMovement, DocumentStatus, Partner, LowStockAlert
+from .models import Warehouse, Location, Category, Product, Operation, OperationLine, StockMovement, DocumentStatus, Partner, LowStockAlert
 from .serializers import (
     WarehouseSerializer, LocationSerializer, CategorySerializer, 
     ProductSerializer, OperationSerializer, StockMovementSerializer, PartnerSerializer, LowStockAlertSerializer
@@ -135,7 +135,12 @@ from .forms import ProductForm, OperationForm, OperationLineForm
 
 @login_required
 def product_list_view(request):
-    queryset = Product.objects.all().order_by('name')
+    from django.db.models import Sum, DecimalField
+    from django.db.models.functions import Coalesce
+    
+    queryset = Product.objects.annotate(
+        total_quantity=Coalesce(Sum('stocks__quantity'), 0, output_field=DecimalField())
+    ).order_by('name')
     
     # Filter by search
     q = request.GET.get('q')
@@ -157,6 +162,7 @@ def product_list_view(request):
         'page_obj': page_obj,
         'is_paginated': page_obj.has_other_pages(),
         'categories': Category.objects.all(),
+        'selected_category': request.GET.get('category', ''),  # Add selected category to avoid auto-format issues
     }
     return render(request, 'inventory/product_list.html', context)
 
@@ -348,6 +354,8 @@ def stock_ledger_view(request):
         'is_paginated': page_obj.has_other_pages(),
         'products': Product.objects.all(),
         'warehouses': Warehouse.objects.all(),
+        'selected_product': request.GET.get('product', ''),  # Add to avoid auto-format issues
+        'selected_warehouse': request.GET.get('warehouse', ''),  # Add to avoid auto-format issues
     }
     return render(request, 'inventory/stock_ledger.html', context)
 

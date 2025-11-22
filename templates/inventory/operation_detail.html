@@ -1,156 +1,110 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Operation: <span id="op-ref"></span></h3>
-    <div>
-        <button id="validate-btn" class="btn btn-success me-2" style="display: none;">Validate</button>
-        <a id="pdf-btn" href="/api/inventory/operations/{{ op_id }}/pdf/" class="btn btn-primary me-2"
-            style="display: none;"><i class="fas fa-file-pdf me-2"></i>Download PDF</a>
-        <button onclick="history.back()" class="btn btn-secondary">Back</button>
-    </div>
-</div>
+{% block title %}Operation {{ operation.reference_number }} - StockMaster{% endblock %}
 
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-3">
-                <strong>Type:</strong> <span id="op-type"></span>
-            </div>
-            <div class="col-md-3">
-                <strong>Status:</strong> <span id="op-status" class="badge"></span>
-            </div>
-            <div class="col-md-3">
-                <strong>Source:</strong> <span id="op-source"></span>
-            </div>
-            <div class="col-md-3">
-                <strong>Destination:</strong> <span id="op-dest"></span>
-            </div>
+{% block page_title %}Operation Details{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <h3 class="card-title">{{ operation.reference_number }}</h3>
+            {% if operation.status == 'DRAFT' %}
+            <span class="badge badge-draft">Draft</span>
+            {% elif operation.status == 'DONE' %}
+            <span class="badge badge-done">Done</span>
+            {% elif operation.status == 'CANCELED' %}
+            <span class="badge badge-danger">Canceled</span>
+            {% else %}
+            <span class="badge badge-warning">{{ operation.status }}</span>
+            {% endif %}
+        </div>
+        <div style="display: flex; gap: 10px;">
+            {% if operation.status == 'DRAFT' %}
+            <a href="{% url 'operation-update' operation.pk %}" class="btn btn-secondary">
+                <i data-feather="edit-2"></i> Edit
+            </a>
+            <a href="{% url 'operation-validate' operation.pk %}" class="btn btn-primary">
+                <i data-feather="check-circle"></i> Validate
+            </a>
+            {% endif %}
+            
+            {% if operation.status == 'DONE' %}
+            <a href="/api/inventory/operations/{{ operation.pk }}/pdf/" class="btn btn-primary">
+                <i data-feather="file-text"></i> Download PDF
+            </a>
+            {% endif %}
+            
+            <a href="{% url 'operation-list' %}" class="btn btn-secondary">Back to List</a>
         </div>
     </div>
+
+    <div class="form-row" style="margin-bottom: 20px;">
+        <div style="flex: 1;">
+            <label class="text-muted" style="font-size: 12px;">Type</label>
+            <div style="font-weight: 500;">{{ operation.operation_type }}</div>
+        </div>
+        <div style="flex: 1;">
+            <label class="text-muted" style="font-size: 12px;">Source</label>
+            <div style="font-weight: 500;">{{ operation.source_location.name|default:"-" }}</div>
+        </div>
+        <div style="flex: 1;">
+            <label class="text-muted" style="font-size: 12px;">Destination</label>
+            <div style="font-weight: 500;">{{ operation.destination_location.name|default:"-" }}</div>
+        </div>
+        <div style="flex: 1;">
+            <label class="text-muted" style="font-size: 12px;">Partner</label>
+            <div style="font-weight: 500;">{{ operation.partner.name|default:"-" }}</div>
+        </div>
+    </div>
+    
+    <div class="form-row" style="margin-bottom: 20px;">
+        <div style="flex: 1;">
+            <label class="text-muted" style="font-size: 12px;">Created By</label>
+            <div style="font-weight: 500;">{{ operation.created_by.username }}</div>
+        </div>
+        <div style="flex: 1;">
+            <label class="text-muted" style="font-size: 12px;">Date</label>
+            <div style="font-weight: 500;">{{ operation.created_at|date:"M d, Y H:i" }}</div>
+        </div>
+        <div style="flex: 2;"></div>
+    </div>
+
+    {% if operation.notes %}
+    <div style="margin-bottom: 20px;">
+        <label class="text-muted" style="font-size: 12px;">Notes</label>
+        <div style="background: #F9FAFB; padding: 12px; border-radius: 6px; color: #4B5563;">
+            {{ operation.notes|linebreaks }}
+        </div>
+    </div>
+    {% endif %}
 </div>
 
-<div class="card shadow-sm border-0">
-    <div class="card-header bg-white">
-        <h5 class="mb-0">Lines</h5>
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div class="card-header" style="padding: 20px; border-bottom: 1px solid #E5E7EB; margin-bottom: 0;">
+        <h3 class="card-title">Lines</h3>
     </div>
-    <div class="card-body">
-        <table class="table">
+    <div class="table-container" style="border: none;">
+        <table>
             <thead>
                 <tr>
                     <th>Product</th>
+                    <th>SKU</th>
                     <th>Demand</th>
                     <th>Done</th>
                 </tr>
             </thead>
-            <tbody id="lines-body">
+            <tbody>
+                {% for item in operation.lines.all %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td style="font-family: monospace;">{{ item.product.sku }}</td>
+                    <td style="font-weight: 600;">{{ item.quantity_demanded }}</td>
+                    <td>{{ item.quantity_done }}</td>
+                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
-
-<div style="display:none;">
-    {% csrf_token %}
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    const opId = "{{ op_id }}";
-
-    document.addEventListener('DOMContentLoaded', function () {
-        fetchOperationDetails();
-
-        document.getElementById('validate-btn').addEventListener('click', validateOperation);
-    });
-
-    function fetchOperationDetails() {
-        fetch(`/api/inventory/operations/${opId}/`)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('op-ref').innerText = data.reference_number;
-                document.getElementById('op-type').innerText = data.operation_type;
-                document.getElementById('op-status').innerText = data.status;
-                document.getElementById('op-status').classList.add('bg-' + getStatusColor(data.status));
-                document.getElementById('op-source').innerText = data.source_location_name || '-';
-                document.getElementById('op-dest').innerText = data.destination_location_name || '-';
-
-                const tbody = document.getElementById('lines-body');
-                tbody.innerHTML = '';
-                data.lines.forEach(line => {
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${line.product_sku} - ${line.product_name}</td>
-                            <td>${line.quantity_demanded}</td>
-                            <td>${line.quantity_done}</td>
-                        </tr>
-                    `;
-                });
-
-                if (data.status === 'DRAFT' || data.status === 'WAITING') {
-                    document.getElementById('validate-btn').style.display = 'inline-block';
-                } else if (data.status === 'DONE') {
-                    document.getElementById('pdf-btn').style.display = 'inline-block';
-                }
-            });
-    }
-
-    function validateOperation() {
-        if (!confirm('Are you sure you want to validate this operation? This will update stock levels.')) return;
-
-        const csrftoken = getCookie('csrftoken');
-
-        fetch(`/api/inventory/operations/${opId}/validate/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrftoken,
-                'Content-Type': 'application/json'
-            }
-        })
-            .then(async response => {
-                if (response.ok) {
-                    location.reload();
-                } else {
-                    const text = await response.text();
-                    try {
-                        const data = JSON.parse(text);
-                        alert('Error: ' + (data.error || JSON.stringify(data)));
-                    } catch (e) {
-                        console.error('Non-JSON response:', text);
-                        alert('Error: Server returned ' + response.status + '. Check console for details.');
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Fetch error:', error);
-                alert('Network error occurred.');
-            });
-    }
-
-    function getStatusColor(status) {
-        switch (status) {
-            case 'DRAFT': return 'secondary';
-            case 'WAITING': return 'warning';
-            case 'READY': return 'info';
-            case 'DONE': return 'success';
-            case 'CANCELED': return 'danger';
-            default: return 'primary';
-        }
-    }
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-</script>
 {% endblock %}

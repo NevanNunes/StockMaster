@@ -12,11 +12,9 @@
             <select name="category" style="width: 150px;">
                 <option value="">All Categories</option>
                 {% for cat in categories %}
-                {% with cat_id=cat.id|stringformat:"s" %}
-                <option value="{{ cat.id }}" {% if request.GET.category==cat_id %}selected{% endif %}>
+                <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>
                     {{ cat.name }}
                 </option>
-                {% endwith %}
                 {% endfor %}
             </select>
             <button type="submit" class="btn btn-secondary">Filter</button>
@@ -50,16 +48,16 @@
                         <div style="font-size: 12px; color: #9CA3AF;">{{ product.description|truncatechars:30 }}</div>
                     </td>
                     <td>{{ product.category.name|default:"-" }}</td>
-                    <td>{{ product.unit }}</td>
+                    <td>{{ product.uom }}</td>
                     <td style="font-weight: 600;">{{ product.total_quantity }}</td>
                     <td>
                         {% if product.total_quantity == 0 %}
                         <span class="badge badge-danger">Out of Stock</span>
-                        {% elif product.total_quantity <= product.min_stock_level %} <span class="badge badge-warning">
-                            Low Stock</span>
-                            {% else %}
-                            <span class="badge badge-success">In Stock</span>
-                            {% endif %}
+                        {% elif product.total_quantity <= product.min_stock_level %}
+                        <span class="badge badge-warning">Low Stock</span>
+                        {% else %}
+                        <span class="badge badge-success">In Stock</span>
+                        {% endif %}
                     </td>
                     <td class="text-right">
                         <a href="{% url 'product-update' product.pk %}" class="btn-icon" title="Edit">
@@ -98,14 +96,14 @@
     {% for num in page_obj.paginator.page_range %}
     {% if page_obj.number == num %}
     <span class="page-link active">{{ num }}</span>
-    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <a href="?page={{ num }}"
-        class="page-link">{{ num }}</a>
-        {% endif %}
-        {% endfor %}
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <a href="?page={{ num }}" class="page-link">{{ num }}</a>
+    {% endif %}
+    {% endfor %}
 
-        {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}" class="page-link">&raquo;</a>
-        {% endif %}
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}" class="page-link">&raquo;</a>
+    {% endif %}
 </div>
 {% endif %}
 

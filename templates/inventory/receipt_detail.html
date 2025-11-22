@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Receipt {{ receipt.reference }} - StockMaster{% endblock %}
+{% block title %}Receipt {{ receipt.reference_number }} - StockMaster{% endblock %}
 
 {% block page_title %}Receipt Details{% endblock %}
 
@@ -8,17 +8,17 @@
 <div class="card">
     <div class="card-header">
         <div style="display: flex; align-items: center; gap: 12px;">
-            <h3 class="card-title">{{ receipt.reference }}</h3>
-            {% if receipt.status == 'draft' %}
+            <h3 class="card-title">{{ receipt.reference_number }}</h3>
+            {% if receipt.status == 'DRAFT' %}
             <span class="badge badge-draft">Draft</span>
-            {% elif receipt.status == 'done' %}
+            {% elif receipt.status == 'DONE' %}
             <span class="badge badge-done">Done</span>
             {% else %}
             <span class="badge badge-warning">{{ receipt.status }}</span>
             {% endif %}
         </div>
         <div style="display: flex; gap: 10px;">
-            {% if receipt.status == 'draft' %}
+            {% if receipt.status == 'DRAFT' %}
             <a href="{% url 'receipt-update' receipt.pk %}" class="btn btn-secondary">
                 <i data-feather="edit-2"></i> Edit
             </a>
@@ -33,11 +33,11 @@
     <div class="form-row" style="margin-bottom: 20px;">
         <div style="flex: 1;">
             <label class="text-muted" style="font-size: 12px;">Supplier</label>
-            <div style="font-weight: 500;">{{ receipt.supplier.name|default:"-" }}</div>
+            <div style="font-weight: 500;">{{ receipt.partner.name|default:"-" }}</div>
         </div>
         <div style="flex: 1;">
             <label class="text-muted" style="font-size: 12px;">Warehouse</label>
-            <div style="font-weight: 500;">{{ receipt.warehouse.name }}</div>
+            <div style="font-weight: 500;">{{ receipt.destination_location.warehouse.name|default:"-" }}</div>
         </div>
         <div style="flex: 1;">
             <label class="text-muted" style="font-size: 12px;">Created By</label>
@@ -73,11 +73,11 @@
                 </tr>
             </thead>
             <tbody>
-                {% for item in receipt.items.all %}
+                {% for item in receipt.lines.all %}
                 <tr>
                     <td>{{ item.product.name }}</td>
                     <td style="font-family: monospace;">{{ item.product.sku }}</td>
-                    <td style="font-weight: 600;">{{ item.quantity }}</td>
+                    <td style="font-weight: 600;">{{ item.quantity_demanded }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

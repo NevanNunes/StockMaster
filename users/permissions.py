@@ -18,3 +18,15 @@ class IsManagerOrReadOnly(permissions.BasePermission):
         # Edit/Delete permissions are only allowed to Managers
         # Also explicitly check for 'validate' action if it's a custom action
         return request.user.is_authenticated and request.user.role == 'MANAGER'
+
+
+class IsManager(permissions.BasePermission):
+    """
+    Strict permission class - only allows Managers.
+    Use this for critical actions like validation.
+    """
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'MANAGER'
+    
+    def has_object_permission(self, request, view, obj):
+        return request.user.is_authenticated and request.user.role == 'MANAGER'

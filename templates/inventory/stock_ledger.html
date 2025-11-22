@@ -13,8 +13,7 @@
             <select name="product">
                 <option value="">All Products</option>
                 {% for product in products %}
-                <option value="{{ product.id }}" {% if request.GET.product==product.id|stringformat:"s" %}selected{%
-                    endif %}>{{ product.name }}</option>
+                <option value="{{ product.id }}" {% if selected_product == product.id|stringformat:"s" %}selected{% endif %}>{{ product.name }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -24,8 +23,7 @@
             <select name="warehouse">
                 <option value="">All Warehouses</option>
                 {% for warehouse in warehouses %}
-                <option value="{{ warehouse.id }}" {% if request.GET.warehouse==warehouse.id|stringformat:"s"
-                    %}selected{% endif %}>{{ warehouse.name }}</option>
+                <option value="{{ warehouse.id }}" {% if selected_warehouse == warehouse.id|stringformat:"s" %}selected{% endif %}>{{ warehouse.name }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -66,13 +64,13 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if move.transaction_type == 'RECEIPT' %}
+                        {% if move.transaction_type == "RECEIPT" %}
                         <span class="badge badge-info">Receipt</span>
-                        {% elif move.transaction_type == 'DELIVERY' %}
+                        {% elif move.transaction_type == "DELIVERY" %}
                         <span class="badge badge-warning">Delivery</span>
-                        {% elif move.transaction_type == 'TRANSFER' %}
+                        {% elif move.transaction_type == "TRANSFER" %}
                         <span class="badge badge-info">Transfer</span>
-                        {% elif move.transaction_type == 'ADJUSTMENT' %}
+                        {% elif move.transaction_type == "ADJUSTMENT" %}
                         <span class="badge badge-danger">Adjustment</span>
                         {% else %}
                         <span class="badge badge-secondary">{{ move.transaction_type }}</span>
@@ -105,23 +103,23 @@
 {% if is_paginated %}
 <div class="pagination">
     {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.product %}&product={{ request.GET.product }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}"
+    <a href="?page={{ page_obj.previous_page_number }}{% if selected_product %}&product={{ selected_product }}{% endif %}{% if selected_warehouse %}&warehouse={{ selected_warehouse }}{% endif %}"
         class="page-link">&laquo;</a>
     {% endif %}
 
     {% for num in page_obj.paginator.page_range %}
     {% if page_obj.number == num %}
     <span class="page-link active">{{ num }}</span>
-    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <a
-        href="?page={{ num }}{% if request.GET.product %}&product={{ request.GET.product }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}"
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+    <a href="?page={{ num }}{% if selected_product %}&product={{ selected_product }}{% endif %}{% if selected_warehouse %}&warehouse={{ selected_warehouse }}{% endif %}"
         class="page-link">{{ num }}</a>
-        {% endif %}
-        {% endfor %}
+    {% endif %}
+    {% endfor %}
 
-        {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.product %}&product={{ request.GET.product }}{% endif %}{% if request.GET.warehouse %}&warehouse={{ request.GET.warehouse }}{% endif %}"
-            class="page-link">&raquo;</a>
-        {% endif %}
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if selected_product %}&product={{ selected_product }}{% endif %}{% if selected_warehouse %}&warehouse={{ selected_warehouse }}{% endif %}"
+        class="page-link">&raquo;</a>
+    {% endif %}
 </div>
 {% endif %}
 {% endblock %}

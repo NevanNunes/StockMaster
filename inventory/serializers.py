@@ -6,10 +6,16 @@ class LowStockAlertSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     location_name = serializers.CharField(source='location.name', read_only=True)
     warehouse_name = serializers.CharField(source='location.warehouse.name', read_only=True)
+    message = serializers.SerializerMethodField()
 
     class Meta:
         model = LowStockAlert
-        fields = '__all__'
+        fields = ['id', 'product', 'product_sku', 'product_name', 'location', 'location_name', 
+                 'warehouse_name', 'current_quantity', 'threshold', 'is_resolved', 'is_read', 
+                 'created_at', 'message']
+
+    def get_message(self, obj):
+        return f"Product {obj.product.sku} is low on stock at {obj.location.name}. Current: {obj.current_quantity}, Min: {obj.threshold}"
 
 class WarehouseSerializer(serializers.ModelSerializer):
     class Meta:

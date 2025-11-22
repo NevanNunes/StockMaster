@@ -116,23 +116,6 @@
                         <i data-feather="menu"></i>
                     </button>
                     <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
-                </div>
-
-                <div class="nav-right">
-                    <!-- Search (Optional) -->
-                    <!-- <div class="search-box">...</div> -->
-
-                    <!-- Notifications -->
-                    <button class="nav-icon-btn">
-                        <i data-feather="bell"></i>
-                        <span class="badge-dot"></span>
-                    </button>
-
-                    <!-- User Menu -->
-                    <div class="user-menu">
-                        <div class="user-avatar">
-                            {% if user.is_authenticated %}
-                            {{ user.username|make_list|first|upper }}
                             {% else %}
                             ?
                             {% endif %}
@@ -164,6 +147,101 @@
 
     <!-- Scripts -->
     <script src="{% static 'js/main.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNotificationCount();
+            
+            // Refresh count every minute
+            setInterval(updateNotificationCount, 60000);
+            
+            // Load notifications when dropdown is opened
+            document.getElementById('notification-btn').addEventListener('show.bs.dropdown', function () {
+                fetchNotifications();
+            });
+        });
+
+        function updateNotificationCount() {
+            fetch('/inventory/api/alerts/unread_count/')
+                .then(response => response.json())
+                .then(data => {
+                    const badge = document.getElementById('notification-badge');
+                    if (data.count > 0) {
+                        badge.style.display = 'block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                })
+                .catch(console.error);
+        }
+
+        function fetchNotifications() {
+            fetch('/inventory/api/alerts/')
+                .then(response => response.json())
+                .then(data => {
+                    const list = document.getElementById('notification-list');
+                    list.innerHTML = '';
+                    
+                    if (data.results && data.results.length > 0) {
+                        data.results.forEach(alert => {
+                            const item = document.createElement('div');
+                            item.className = `dropdown-item p-2 border-bottom ${alert.is_read ? 'bg-light' : ''}`;
+                            item.innerHTML = `
+                                <div class="d-flex justify-content-between">
+                                    <small class="fw-bold text-danger">Low Stock</small>
+                                    <small class="text-muted">${new Date(alert.created_at).toLocaleDateString()}</small>
+                                </div>
+                                <p class="mb-1 text-sm">${alert.message}</p>
+                                ${!alert.is_read ? `<button class="btn btn-xs btn-link p-0" onclick="markRead(${alert.id}, event)">Mark read</button>` : ''}
+                            `;
+                            list.appendChild(item);
+                        });
+                    } else {
+                        list.innerHTML = '<div class="text-center p-3 text-muted">No notifications</div>';
+                    }
+                })
+                .catch(console.error);
+        }
+
+        function markRead(id, event) {
+            event.stopPropagation(); // Prevent dropdown from closing
+            const csrftoken = getCookie('csrftoken');
+            
+            fetch(`/inventory/api/alerts/${id}/mark_read/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    updateNotificationCount();
+                    fetchNotifications(); // Reload list
+                }
+            });
+        }
+
+        function markAllRead() {
+            // Implementation for marking all as read if API supports it
+            // For now, we'll just reload
+            fetchNotifications();
+        }
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 

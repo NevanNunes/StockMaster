@@ -9,8 +9,8 @@
         <form method="GET" class="flex gap-2" style="flex: 1; min-width: 300px;">
             <select name="status" style="width: 150px;">
                 <option value="">All Statuses</option>
-                <option value="draft" {% if selected_status == "draft" %}selected{% endif %}>Draft</option>
-                <option value="done" {% if selected_status == "done" %}selected{% endif %}>Done</option>
+                <option value="DRAFT" {% if selected_status == "DRAFT" %}selected{% endif %}>Draft</option>
+                <option value="DONE" {% if selected_status == "DONE" %}selected{% endif %}>Done</option>
             </select>
             <button type="submit" class="btn btn-secondary">Filter</button>
         </form>
@@ -30,7 +30,7 @@
                     <th>Warehouse</th>
                     <th>Date</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th class="text-right">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -38,16 +38,16 @@
                 <tr>
                     <td style="font-family: monospace; font-weight: 500;">
                         <a href="{% url 'receipt-detail' receipt.pk %}" class="text-primary">
-                            {{ receipt.reference }}
+                            {{ receipt.reference_number }}
                         </a>
                     </td>
-                    <td>{{ receipt.supplier.name|default:"-" }}</td>
-                    <td>{{ receipt.warehouse.name }}</td>
+                    <td>{{ receipt.partner.name|default:"-" }}</td>
+                    <td>{{ receipt.destination_location.warehouse.name|default:"-" }}</td>
                     <td>{{ receipt.created_at|date:"M d, Y" }}</td>
                     <td>
-                        {% if receipt.status == "draft" %}
+                        {% if receipt.status == "DRAFT" %}
                         <span class="badge badge-draft">Draft</span>
-                        {% elif receipt.status == "done" %}
+                        {% elif receipt.status == "DONE" %}
                         <span class="badge badge-done">Done</span>
                         {% else %}
                         <span class="badge badge-warning">{{ receipt.status }}</span>
@@ -57,7 +57,7 @@
                         <a href="{% url 'receipt-detail' receipt.pk %}" class="btn-icon" title="View">
                             <i data-feather="eye" style="width: 16px; height: 16px;"></i>
                         </a>
-                        {% if receipt.status == "draft" %}
+                        {% if receipt.status == "DRAFT" %}
                         <a href="{% url 'receipt-update' receipt.pk %}" class="btn-icon" title="Edit">
                             <i data-feather="edit-2" style="width: 16px; height: 16px;"></i>
                         </a>
